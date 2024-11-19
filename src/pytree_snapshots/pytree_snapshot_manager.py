@@ -7,6 +7,8 @@ import zlib
 
 from .pytree_snapshot import PytreeSnapshot
 
+DEFAULT = object()
+
 
 class PytreeSnapshotManager:
     """
@@ -29,7 +31,7 @@ class PytreeSnapshotManager:
         self.max_snapshots = max_snapshots
         self.deepcopy = deepcopy
 
-    def __getitem__(self, index, deepcopy=None):
+    def __getitem__(self, index, deepcopy=DEFAULT):
         """
         Retrieve a PytreeSnapshot by index or ID.
 
@@ -117,7 +119,7 @@ class PytreeSnapshotManager:
         self.snapshots[snapshot_id] = PytreeSnapshot(pytree, metadata, tags, compress)
         return snapshot_id
 
-    def get_snapshot(self, snapshot_id, deepcopy=None):
+    def get_snapshot(self, snapshot_id, deepcopy=DEFAULT):
         """
         Retrieve the PyTree from a PytreeSnapshot.
 
@@ -138,10 +140,10 @@ class PytreeSnapshotManager:
         if snapshot_id not in self.snapshots:
             raise ValueError(f"PytreeSnapshot ID '{snapshot_id}' does not exist.")
         return self.snapshots[snapshot_id].get_pytree(
-            deepcopy if deepcopy is not None else self.deepcopy
+            deepcopy if deepcopy is not DEFAULT else self.deepcopy
         )
 
-    def get_latest_snapshot(self, deepcopy=None):
+    def get_latest_snapshot(self, deepcopy=DEFAULT):
         """
         Retrieve the most recent snapshot.
 
@@ -158,7 +160,7 @@ class PytreeSnapshotManager:
             raise IndexError("No snapshots available.")
         snapshot_id = self.snapshot_order[-1]
         return self.snapshots[snapshot_id].get_pytree(
-            deepcopy if deepcopy is not None else self.deepcopy
+            deepcopy if deepcopy is not DEFAULT else self.deepcopy
         )
 
     def delete_snapshot(self, snapshot_id):
@@ -394,7 +396,7 @@ class PytreeSnapshotManager:
             if start_time <= snapshot.timestamp <= end_time
         ]
 
-    def get_snapshot_by_index(self, index, deepcopy=None):
+    def get_snapshot_by_index(self, index, deepcopy=DEFAULT):
         """
         Retrieve a PytreeSnapshot by its creation index.
 
@@ -417,7 +419,41 @@ class PytreeSnapshotManager:
         snapshot_id = self.snapshot_order[index]
         return self.get_snapshot(snapshot_id, deepcopy=deepcopy)
 
-    def get_oldest_snapshot(self, deepcopy=None):
+    def find_snapshot_by_criteria(self, comparator):
+        """
+        Find a snapshot that meets a user-defined criterion.
+
+        Args:
+            comparator (callable): A function that takes two snapshots and returns
+                True if the first snapshot is "better" or meets the criteria over the second.
+
+        Returns:
+            str: The ID of the snapshot that satisfies the criterion, or None if no snapshots exist.
+
+        Examples:
+            Find the snapshot with the highest accuracy:
+            >>> selected_snapshot_id = manager.find_snapshot_by_criteria(
+                    lambda s1, s2: s1.metadata["accuracy"] >= s2.metadata["accuracy"]
+                )
+            >>> print(selected_snapshot_id)
+        """
+        if not callable(comparator):
+            raise ValueError("The comparator must be a callable function.")
+
+        if not self.snapshots:
+            return None  # No snapshots to compare
+
+        selected_snapshot_id = None
+        selected_snapshot = None
+
+        for snapshot_id, snapshot in self.snapshots.items():
+            if selected_snapshot is None or comparator(snapshot, selected_snapshot):
+                selected_snapshot_id = snapshot_id
+                selected_snapshot = snapshot
+
+        return selected_snapshot_id
+
+    def get_oldest_snapshot(self, deepcopy=DEFAULT):
         """
         Retrieve the oldest PytreeSnapshot.
 
@@ -563,10 +599,12 @@ class PytreeSnapshotManager:
             aligned1 = {}
             aligned2 = {}
             for key in all_keys:
-                aligned1[key], aligned2[key] = PytreeSnapshotManager.unify_pytree_structures(
-                    pytree1.get(key, placeholder),
-                    pytree2.get(key, placeholder),
-                    placeholder,
+                aligned1[key], aligned2[key] = (
+                    PytreeSnapshotManager.unify_pytree_structures(
+                        pytree1.get(key, placeholder),
+                        pytree2.get(key, placeholder),
+                        placeholder,
+                    )
                 )
             return aligned1, aligned2
         elif isinstance(pytree1, (list, tuple)) and isinstance(pytree2, (list, tuple)):
