@@ -8,11 +8,11 @@ manager.save_snapshot({}, snapshot_id="snap1", metadata={"accuracy": 0.85,"creat
 manager.save_snapshot({}, snapshot_id="snap2", metadata={"accuracy": 0.90,"created_at": 1695000000.0},tags=["draft"])
 manager.save_snapshot({}, snapshot_id="snap3", metadata={"accuracy": 0.88,"created_at": 1790000000.0},tags=["final", "experiment", "published"])
 
-best_snapshot_id = manager.find_snapshot_by_criteria(
+snapshot_with_highest_accuracy = manager.find_snapshot_by_criteria(
     lambda s1, s2: s1.metadata["accuracy"] >= s2.metadata["accuracy"]
 )
 
-print(f"Snapshot with highest accuracy: {best_snapshot_id}")
+print(f"Snapshot with highest accuracy: {snapshot_with_highest_accuracy}")
 
 # Use a comparator to find the snapshot with the most tags
 snapshot_with_most_tags = manager.find_snapshot_by_criteria(
