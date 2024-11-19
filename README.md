@@ -2,7 +2,7 @@
 
 A lightweight and flexible manager for capturing, managing, and comparing PyTree snapshots in JAX. 
 
-⚠️ Currently in Beta: While the core functionality seems solid, PyTreeSnapshots is still evolving. Expect ongoing improvements, additional features, and extended documentation. Your feedback and contributions are welcome!
+⚠️ Currently in Beta: While the core functionality seems solid, PyTreeSnapshots is still evolving. Expect ongoing improvements, additional features, and extended documentation. Your feedback and contributions are very welcome!
 
 ## Features
 
@@ -28,13 +28,6 @@ Install the package using setup.py:
 
 ```bash
 pip install .
-```
-
-### Run the Examples
-
-```bash
-cd examples
-python quickstart_demo.py
 ```
 
 ## Quick Start
@@ -89,7 +82,7 @@ print("Snapshot snap1:", snapshot)
 # Output: Snapshot snap1: {'a': 1, 'b': 2}
 ```
 
-Check out the examples folder for additional demos. 
+Explore the [`examples` folder](./examples) for additional demos showcasing various features and use cases.
 
 ## Roadmap
 
