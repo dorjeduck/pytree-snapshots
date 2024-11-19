@@ -419,9 +419,9 @@ class PytreeSnapshotManager:
         snapshot_id = self.snapshot_order[index]
         return self.get_snapshot(snapshot_id, deepcopy=deepcopy)
 
-    def find_snapshot_by_criteria(self, comparator):
+    def select_snapshot_by_comparator(self, comparator):
         """
-        Find a snapshot that meets a user-defined criterion.
+        Find a snapshot by comparing all snapshots.
 
         Args:
             comparator (callable): A function that takes two snapshots and returns
