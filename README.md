@@ -1,8 +1,8 @@
 # PyTree Snapshots
 
-A lightweight and flexible manager for capturing, managing, and comparing PyTree snapshots in JAX. Designed with simplicity and versatility in mind, this library is perfect for exploring and managing PyTree structures.
+A lightweight and flexible manager for capturing, managing, and comparing PyTree snapshots in JAX. 
 
-⚠️ Currently in Beta: While the core functionality is solid, PyTreeSnapshots is still evolving. Expect ongoing improvements, additional features, and extended documentation. Your feedback and contributions are welcome!
+⚠️ Currently in Beta: While the core functionality seems solid, PyTreeSnapshots is still evolving. Expect ongoing improvements, additional features, and extended documentation. Your feedback and contributions are welcome!
 
 ## Features
 
