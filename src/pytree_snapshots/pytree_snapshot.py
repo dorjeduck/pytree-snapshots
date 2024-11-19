@@ -22,14 +22,38 @@ class PytreeSnapshot:
         # Store the pytree, compressing it if needed
         self.pytree = self._compress(pytree) if compress else pytree
 
+    def to_dict(self):
+        """Convert the snapshot to a dictionary for serialization."""
+        return {
+            "pytree": self._decompress() if self.compress else self.pytree,
+            "metadata": self.metadata,
+            "tags": self.tags,
+            "compress": self.compress,
+            "timestamp": self.timestamp,
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        """Recreate a snapshot from a dictionary."""
+        return cls(
+            pytree=data["pytree"],
+            metadata=data.get("metadata"),
+            tags=data.get("tags"),
+            compress=data.get("compress", False),
+        )
+
     def _compress(self, pytree):
-        """Compress the pytree using zlib and pickle."""
-        return zlib.compress(pickle.dumps(pytree))
+        try:
+            return zlib.compress(pickle.dumps(pytree))
+        except Exception as e:
+            raise RuntimeError("Compression failed") from e
 
     def _decompress(self):
-        """Decompress the pytree if it is compressed."""
-        return pickle.loads(zlib.decompress(self.pytree)) if self.compress else self.pytree
-
+        try:
+            return pickle.loads(zlib.decompress(self.pytree)) if self.compress else self.pytree
+        except Exception as e:
+            raise RuntimeError("Decompression failed") from e
+    
     def get_pytree(self, deepcopy=True):
         """
         Retrieve the pytree, decompressing if needed.

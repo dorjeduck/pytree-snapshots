@@ -5,7 +5,7 @@ import uuid
 import pickle
 import zlib
 
-from .pytree_snaphot import PytreeSnapshot
+from .pytree_snapshot import PytreeSnapshot
 
 
 class PytreeSnapshotManager:
