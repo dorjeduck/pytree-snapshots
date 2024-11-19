@@ -82,7 +82,7 @@ print("Snapshot snap1:", snapshot)
 # Output: Snapshot snap1: {'a': 1, 'b': 2}
 ```
 
-Example 3: Find Snapshots by User-Defined Criteria
+### Example 3: Find Snapshots by User-Defined Criteria
 
 This example demonstrates how to search for snapshots based on custom criteria using a user-defined comparator function. You can use this functionality to identify snapshots that meet specific conditions, such as the highest accuracy, the most tags, or the earliest creation time, as demonstrated in the example below.
 
@@ -116,7 +116,7 @@ oldest_snapshot_id = manager.find_snapshot_by_criteria(
 
 print(f"Oldest snapshot: {oldest_snapshot_id}")
 
-# Output
+# Output:
 # Snapshot with highest accuracy: snap2
 # Snapshot with most tags: snap3
 # Oldest snapshot: snap1
