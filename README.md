@@ -41,14 +41,14 @@ from pytree_snapshots import PytreeSnapshotManager
 
 manager = PytreeSnapshotManager()
 
-pytree1 = {"a": 1, "b": 2}
+pytree1 = {"a": 1, "b": 2, "c": 4}
 pytree2 = {"a": 1, "b": 3}
 
 manager.save_snapshot(pytree1, snapshot_id="snap1")
 manager.save_snapshot(pytree2, snapshot_id="snap2")
 
 differences = manager.compare_snapshots("snap1", "snap2")
-print(differences)  # {'a': NO_DIFFERENCE, 'b': (2, 3)}
+print(differences)  # {'a': NO_DIFFERENCE, 'b': (2, 3), 'c': (4, LEAF_MISSING)}
 
 print(jax.tree.leaves(differences)[0] == PytreeSnapshotManager.NO_DIFFERENCE) # True
 ```
