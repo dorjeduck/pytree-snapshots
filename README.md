@@ -49,6 +49,8 @@ manager.save_snapshot(pytree2, snapshot_id="snap2")
 
 differences = manager.compare_snapshots("snap1", "snap2")
 print(differences)  # {'a': NO_DIFFERENCE, 'b': (2, 3)}
+
+print(jax.tree.leaves(differences)[0] == PytreeSnapshotManager.NO_DIFFERENCE) # True
 ```
 
 ### Example 2: Managing Snapshots with Tags
