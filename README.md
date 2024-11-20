@@ -1,6 +1,6 @@
 # PyTree Snapshots
 
-A lightweight and flexible manager for capturing, managing, and comparing PyTree snapshots in JAX. 
+A lightweight and flexible manager for capturing, managing, and comparing PyTree snapshots in JAX.
 
 ⚠️ Currently in Beta: While the core functionality seems solid, PyTreeSnapshots is still evolving. Expect ongoing improvements, additional features, and extended documentation. Your feedback and contributions are very welcome!
 
@@ -48,7 +48,7 @@ manager.save_snapshot(pytree1, snapshot_id="snap1")
 manager.save_snapshot(pytree2, snapshot_id="snap2")
 
 differences = manager.compare_snapshots("snap1", "snap2")
-print(differences)  # {'a': None, 'b': (2, 3)}
+print(differences)  # {'a': NO_DIFFERENCE, 'b': (2, 3)}
 ```
 
 ### Example 2: Managing Snapshots with Tags

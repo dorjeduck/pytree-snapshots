@@ -10,10 +10,28 @@ from .pytree_snapshot import PytreeSnapshot
 DEFAULT = object()
 
 
+# Define a constant for "No Difference"
+class NotCompared:
+    def __repr__(self):
+        return "NotCompared"
+
+# Define a constant for "No Difference"
+class NoDifference:
+    def __repr__(self):
+        return "NO_DIFFERENCE"
+
+class LeafMissing:
+    def __repr__(self):
+        return "LEAF_MISSING"  
+
 class PytreeSnapshotManager:
     """
     A manager for storing and managing PyTree snapshots.
     """
+
+    NO_DIFFERENCE = NoDifference()
+    NOT_COMPARED = NotCompared()
+    LEAF_MISSING = LeafMissing()
 
     # Initialization
 
@@ -552,19 +570,19 @@ class PytreeSnapshotManager:
 
         def default_comparator(x, y):
             if isinstance(x, jnp.ndarray) and isinstance(y, jnp.ndarray):
-                return None if jnp.array_equal(x, y) else (x, y)
+                return PytreeSnapshotManager.NO_DIFFERENCE if jnp.array_equal(x, y) else (x, y)
             if isinstance(x, np.ndarray) and isinstance(y, np.ndarray):
-                return None if np.array_equal(x, y) else (x, y)
+                return PytreeSnapshotManager.NO_DIFFERENCE if np.array_equal(x, y) else (x, y)
             if isinstance(x, (int, float, str, bool)) and isinstance(
                 y, (int, float, str, bool)
             ):
-                return (x, y) if x != y else None
+                return (x, y) if x != y else PytreeSnapshotManager.NO_DIFFERENCE
             if type(x) != type(y) or x != y:
                 return (x, y)
-            return None
+            return PytreeSnapshotManager.NO_DIFFERENCE
 
         comparator = (
-            (lambda x, y: None if custom_comparator(x, y) else (x, y))
+            (lambda x, y: PytreeSnapshotManager.NO_DIFFERENCE if custom_comparator(x, y) else (x, y))
             if custom_comparator
             else default_comparator
         )
@@ -572,7 +590,7 @@ class PytreeSnapshotManager:
         def collect_differences(x, y):
             # Apply condition
             if condition and not (condition(x) and condition(y)):
-                return Ellipsis  # Represent excluded elements with Ellipsis
+                return PytreeSnapshotManager.NOT_COMPARED  # Represent excluded elements with Ellipsis
             result = comparator(x, y)
             return result if result is not None else None
 
@@ -581,15 +599,15 @@ class PytreeSnapshotManager:
         return differences
 
     @staticmethod
-    def unify_pytree_structures(pytree1, pytree2, placeholder=Ellipsis):
+    def unify_pytree_structures(pytree1, pytree2):
+                                
         """
         Align the structures of two PyTrees, filling in missing keys or elements with a placeholder.
 
         Args:
             pytree1: The first PyTree (can be a nested dict/list/tuple).
             pytree2: The second PyTree (can be a nested dict/list/tuple).
-            placeholder: The value to use for missing elements. Defaults to Ellipsis.
-
+            
         Returns:
             Tuple: Two PyTrees with unified structure.
         """
@@ -601,17 +619,16 @@ class PytreeSnapshotManager:
             for key in all_keys:
                 aligned1[key], aligned2[key] = (
                     PytreeSnapshotManager.unify_pytree_structures(
-                        pytree1.get(key, placeholder),
-                        pytree2.get(key, placeholder),
-                        placeholder,
+                        pytree1.get(key, PytreeSnapshotManager.LEAF_MISSING),
+                        pytree2.get(key, PytreeSnapshotManager.LEAF_MISSING)
+                        )
                     )
-                )
             return aligned1, aligned2
         elif isinstance(pytree1, (list, tuple)) and isinstance(pytree2, (list, tuple)):
             # Align lists/tuples
             max_len = max(len(pytree1), len(pytree2))
-            aligned1 = list(pytree1) + [placeholder] * (max_len - len(pytree1))
-            aligned2 = list(pytree2) + [placeholder] * (max_len - len(pytree2))
+            aligned1 = list(pytree1) + [PytreeSnapshotManager.LEAF_MISSING] * (max_len - len(pytree1))
+            aligned2 = list(pytree2) + [PytreeSnapshotManager.LEAF_MISSING] * (max_len - len(pytree2))
             if isinstance(pytree1, tuple):
                 aligned1 = tuple(aligned1)
             if isinstance(pytree2, tuple):

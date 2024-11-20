@@ -19,7 +19,7 @@ def test_simple_case(manager):
     differences = manager.compare_snapshots("id1", "id2")
 
     # Expected differences as a PyTree
-    expected_differences = {"a": None, "b": (2, 3), "x": (Ellipsis, 4)}
+    expected_differences = {"a": PytreeSnapshotManager.NO_DIFFERENCE, "b": (2, 3), "x": (PytreeSnapshotManager.LEAF_MISSING, 4)}
 
     # Assert that the PyTree structures match
     assert differences == expected_differences
@@ -36,7 +36,7 @@ def test_identical_pytrees(manager):
     differences = manager.compare_snapshots("id1", "id2")
 
     # Expected differences as a PyTree
-    expected_differences = {"a": None, "b": {"x": None}}
+    expected_differences = {"a": PytreeSnapshotManager.NO_DIFFERENCE, "b": {"x": PytreeSnapshotManager.NO_DIFFERENCE}}
 
     assert differences == expected_differences
 
@@ -53,9 +53,9 @@ def test_nested_structures(manager):
 
     # Expected differences as a PyTree
     expected_differences = {
-        "a": {"x": None, "y": (2, 3)},
-        "b": None,
-        "c": (Ellipsis, 4),
+        "a": {"x": PytreeSnapshotManager.NO_DIFFERENCE, "y": (2, 3)},
+        "b": PytreeSnapshotManager.NO_DIFFERENCE,
+        "c": (PytreeSnapshotManager.LEAF_MISSING, 4),
     }
 
     assert differences == expected_differences
@@ -88,7 +88,7 @@ def test_mismatched_keys(manager):
     differences = manager.compare_snapshots("id1", "id2")
 
     # Expected differences as a PyTree
-    expected_differences = {"a": (1, Ellipsis), "b": (Ellipsis, 2)}
+    expected_differences = {"a": (1, PytreeSnapshotManager.LEAF_MISSING), "b": (PytreeSnapshotManager.LEAF_MISSING, 2)}
 
     assert differences == expected_differences
 
@@ -110,7 +110,7 @@ def test_custom_comparator(manager):
     )
 
     # Expected differences as a PyTree
-    expected_differences = {"a": (10, 15), "b": None, "x": (Ellipsis, 12)}
+    expected_differences = {"a": (10, 15), "b": PytreeSnapshotManager.NO_DIFFERENCE, "x": (PytreeSnapshotManager.LEAF_MISSING, 12)}
 
     # Assert that the PyTree structures match
     assert differences == expected_differences
@@ -121,8 +121,8 @@ def test_condition_function(manager):
     def condition(x):
         return isinstance(x, int) and x > 10
 
-    pytree1 = {"a": 5, "b": 15, "x": "aa"}
-    pytree2 = {"a": 5, "b": 20}
+    pytree1 = {"a": 5, "b": 15}
+    pytree2 = {"a": 5, "b": 20, "x": "aa"}
 
     manager.save_snapshot(pytree1, snapshot_id="id1")
     manager.save_snapshot(pytree2, snapshot_id="id2")
@@ -130,7 +130,7 @@ def test_condition_function(manager):
     differences = manager.compare_snapshots("id1", "id2", condition=condition)
 
     # Expected differences as a PyTree
-    expected_differences = {"a": Ellipsis, "b": (15, 20), "x": Ellipsis}
+    expected_differences = {"a": PytreeSnapshotManager.NOT_COMPARED, "b": (15, 20), "x": PytreeSnapshotManager.NOT_COMPARED}
 
     assert differences == expected_differences
 
@@ -138,7 +138,7 @@ def test_condition_function(manager):
 def test_custom_node_with_children(manager):
     # Define a custom node class with nested children
     class CustomNode:
-        def __init__(self, children, metadata=None):
+        def __init__(self, children, metadata=PytreeSnapshotManager.NO_DIFFERENCE):
             self.children = children
             self.metadata = metadata or {}
 
@@ -183,9 +183,9 @@ def test_custom_node_with_children(manager):
 
     # Expected differences as a PyTree
     expected_differences = {
-        "a" : CustomNode(children=({"x": None}, {"y": (2, 3)}), metadata={"type": "nested"}),
-        "b": None,
-        "c": (Ellipsis,4)
+        "a" : CustomNode(children=({"x": PytreeSnapshotManager.NO_DIFFERENCE}, {"y": (2, 3)}), metadata={"type": "nested"}),
+        "b": PytreeSnapshotManager.NO_DIFFERENCE,
+        "c": (PytreeSnapshotManager.LEAF_MISSING,4)
     }
 
     assert differences == expected_differences
