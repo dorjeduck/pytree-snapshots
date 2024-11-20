@@ -18,7 +18,7 @@ class PytreeSnapshotManager:
 
     # Initialization
 
-    def __init__(self, max_snapshots=None, deepcopy=True):
+    def __init__(self, p=None, deepcopy=True):
         """
         Initialize the PytreeSnapshotManager.
 
