@@ -1,16 +1,12 @@
 # PyTree Snapshots
 
-A lightweight and flexible manager for capturing, managing, and comparing PyTree snapshots in JAX.
-
-⚠️ Currently in Beta: While the core functionality seems solid, PyTreeSnapshots is still evolving. Expect ongoing improvements, additional features, and extended documentation. Your feedback and contributions are very welcome!
+A lightweight and flexible manager for capturing and managing `PyTree` snapshots in JAX, currently in Beta.
 
 ## Features
 
 - Save and retrieve snapshots of PyTrees.
-- Compare differences between snapshots.
 - Metadata and tagging support.
-- Basic snapshot query support. 
-- Support for custom PyTree nodes.
+- Basic snapshot query support.
 
 ## Installation
 
@@ -35,23 +31,22 @@ pip install .
 
 ### Example 1: Basic Snapshot Comparison
 
-This example demonstrates how to save two snapshots of PyTrees and compare their differences. It’s a simple way to get started with the core functionality of `PyTreeSnapshots`.
+Basic example demonstrating how to save and retrieve snapshots of PyTrees.
 
 ```python
 from pytree_snapshots import PytreeSnapshotManager
 
+# Initialize the manager
 manager = PytreeSnapshotManager()
 
-pytree1 = {"a": 1, "b": 2, "c": 4}
-pytree2 = {"a": 1, "b": 3}
+# Save a snapshot
+pytree = {"a": 1, "b": 2}
+snapshot_id = manager.save_snapshot(pytree, metadata={"project": "example"})
 
-manager.save_snapshot(pytree1, snapshot_id="snap1")
-manager.save_snapshot(pytree2, snapshot_id="snap2")
-
-differences = manager.compare_snapshots("snap1", "snap2")
-print(differences)  # {'a': NO_DIFFERENCE, 'b': (2, 3), 'c': (4, LEAF_MISSING)}
-
-print(jax.tree.leaves(differences)[0] == PytreeSnapshotManager.NO_DIFFERENCE) # True
+# Retrieve the snapshot
+retrieved = manager.get_snapshot(snapshot_id)
+print("Retrieved snapshot:", retrieved)
+# Output: Retrieved snapshot: {'a': 1, 'b': 2}
 ```
 
 ### Example 2: Managing Snapshots with Tags
@@ -87,7 +82,7 @@ print("Snapshot snap1:", snapshot)
 
 ### Example 3: Custom Criteria for Selecting Snapshots
 
-This example shows how to identify a single snapshot that meets specific user-defined criteria using the `select_snapshot_by_comparator` method. You can use this feature to search for snapshots based on metadata, tags, or other properties, such as finding the snapshot with the highest accuracy, the most associated tags, or the earliest creation time.
+This example shows how to identify a single snapshot that meets specific user-defined criteria using the `get_snapshot_by_comparator` method. You can use this feature to search for snapshots based on metadata, tags, or other properties, such as finding the snapshot with the highest accuracy, the most associated tags, or the earliest creation time.
 
 ```python
 from pytree_snapshots import PytreeSnapshotManager
@@ -95,43 +90,48 @@ from pytree_snapshots import PytreeSnapshotManager
 # Initialize the manager
 manager = PytreeSnapshotManager()
 
-manager.save_snapshot({}, snapshot_id="snap1", metadata={"accuracy": 0.85,"created_at": 1690000000.0},tags=["experiment", "draft"])
-manager.save_snapshot({}, snapshot_id="snap2", metadata={"accuracy": 0.90,"created_at": 1695000000.0},tags=["draft"])
-manager.save_snapshot({}, snapshot_id="snap3", metadata={"accuracy": 0.88,"created_at": 1790000000.0},tags=["final", "experiment", "published"])
+# Save snapshots with metadata and tags
+manager.save_snapshot({}, snapshot_id="snap1", metadata={"accuracy": 0.85, "created_at": 1690000000.0}, tags=["experiment", "draft"])
+manager.save_snapshot({}, snapshot_id="snap2", metadata={"accuracy": 0.90, "created_at": 1695000000.0}, tags=["draft"])
+manager.save_snapshot({}, snapshot_id="snap3", metadata={"accuracy": 0.88, "created_at": 1790000000.0}, tags=["final", "experiment", "published"])
 
-snapshot_with_highest_accuracy = manager.select_snapshot_by_comparator(
+# Find snapshot with the highest accuracy
+snapshot_with_highest_accuracy = manager.get_snapshot_by_comparator(
     lambda s1, s2: s1.metadata["accuracy"] >= s2.metadata["accuracy"]
 )
-
 print(f"Snapshot with highest accuracy: {snapshot_with_highest_accuracy}")
+# Output: Snapshot with highest accuracy: snap2
 
-# Use a comparator to find the snapshot with the most tags
-snapshot_with_most_tags = manager.select_snapshot_by_comparator(
+# Find snapshot with the most tags
+snapshot_with_most_tags = manager.get_snapshot_by_comparator(
     lambda s1, s2: len(s1.tags) >= len(s2.tags)
 )
-
 print(f"Snapshot with most tags: {snapshot_with_most_tags}")
+# Output: Snapshot with most tags: snap3
 
-# Use a comparator to find the oldest snapshot
-oldest_snapshot_id = manager.select_snapshot_by_comparator(
+# Find the oldest snapshot
+oldest_snapshot_id = manager.get_snapshot_by_comparator(
     lambda s1, s2: s1.metadata["created_at"] <= s2.metadata["created_at"]
 )
-
 print(f"Oldest snapshot: {oldest_snapshot_id}")
-
-# Output:
-# Snapshot with highest accuracy: snap2
-# Snapshot with most tags: snap3
-# Oldest snapshot: snap1
+# Output: Oldest snapshot: snap1
 ```
 
 Explore the [`examples` folder](./examples) for additional demos showcasing various features and use cases.
 
 ## Roadmap
 
-- Add support for handling nested custom PyTree nodes.
 - Improve metadata and tag querying capabilities.
-- ...
+- Listening to feedback ...
+
+## Contribution
+
+We welcome contributions to PyTree Snapshots! Here’s how you can get involved:
+
+1. Fork the Repository:
+    - Start by forking the GitHub repository.
+2. Create a Branch:
+    - Create a feature branch for your changes:
 
 ## Changelog
 

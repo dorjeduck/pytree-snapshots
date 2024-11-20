@@ -7,31 +7,14 @@ import zlib
 
 from .pytree_snapshot import PytreeSnapshot
 
+
 DEFAULT = object()
 
-
-# Define a constant for "No Difference"
-class NotCompared:
-    def __repr__(self):
-        return "NotCompared"
-
-# Define a constant for "No Difference"
-class NoDifference:
-    def __repr__(self):
-        return "NO_DIFFERENCE"
-
-class LeafMissing:
-    def __repr__(self):
-        return "LEAF_MISSING"  
 
 class PytreeSnapshotManager:
     """
     A manager for storing and managing PyTree snapshots.
     """
-
-    NO_DIFFERENCE = NoDifference()
-    NOT_COMPARED = NotCompared()
-    LEAF_MISSING = LeafMissing()
 
     # Initialization
 
@@ -368,8 +351,7 @@ class PytreeSnapshotManager:
             if query_func(pytree):
                 matching_snapshots.append(snapshot_id)
         return matching_snapshots
-        
-    
+
     def find_snapshots_by_metadata(self, key, value=None):
         """
         Find all PytreeSnapshots that contain a specific metadata key and optionally a specific value.
@@ -412,7 +394,7 @@ class PytreeSnapshotManager:
             if snapshot.has_tag(tag)
         ]
 
-    def get_snapshots_by_time_range(self, start_time, end_time):
+    def find_snapshots_by_time_range(self, start_time, end_time):
         """
         Retrieve PytreeSnapshots created within a specified time range.
 
@@ -456,7 +438,7 @@ class PytreeSnapshotManager:
         snapshot_id = self.snapshot_order[index]
         return self.get_snapshot(snapshot_id, deepcopy=deepcopy)
 
-    def select_snapshot_by_comparator(self, comparator):
+    def get_snapshot_by_comparator(self, comparator):
         """
         Find a snapshot by comparing all snapshots.
 
@@ -528,137 +510,7 @@ class PytreeSnapshotManager:
         """
         return self.snapshot_order if ascending else list(reversed(self.snapshot_order))
 
-    # Comparison
-
-    def compare_snapshots(
-        self,
-        snapshot_id1,
-        snapshot_id2,
-        custom_comparator=None,
-        condition=None,
-    ):
-        """
-        Compare two PytreeSnapshots and return their differences as a PyTree.
-
-        Args:
-            snapshot_id1 (str): The ID of the first PytreeSnapshot.
-            snapshot_id2 (str): The ID of the second PytreeSnapshot.
-            custom_comparator (callable, optional): A custom function to compare leaves. Defaults to None.
-                - The function should take two arguments (leaf1, leaf2) and return:
-                    - None: If the leaves are considered equal.
-                    - A custom difference representation otherwise.
-            condition (callable, optional): A function that takes a leaf value and returns True if it should be compared, False otherwise.
-                - If the condition is False, the leaf is excluded from the comparison.
-            return_paths (bool): If True, include paths to differing elements in the result. Defaults to True.
-
-        Returns:
-            dict: Differences between the two PytreeSnapshots.
-                - Keys are paths (if `return_paths=True`) or an index-like representation.
-                - Values are tuples: (value_in_snapshot1, value_in_snapshot2) or the custom comparison result.
-
-        Raises:
-            ValueError: If either PytreeSnapshot ID does not exist.
-
-        Examples:
-            Save two PytreeSnapshots with different PyTrees:
-            >>> pytree1 = {"a": jnp.array([1, 2, 3]), "b": {"x": 42, "y": "hello"}}
-            >>> pytree2 = {"a": jnp.array([1, 2, 4]), "b": {"x": 42, "y": "world"}}
-            >>> manager.save_snapshot(pytree1, snapshot_id="id1")
-            >>> manager.save_snapshot(pytree2, snapshot_id="id2")
-
-            Compare the two PytreeSnapshots:
-            >>> differences = manager.compare_snapshots(
-                    "id1", "id2",
-                    condition=lambda x: isinstance(x, jnp.ndarray)
-                )
-            >>> print(differences)
-
-            Output:
-            {
-                "a": (Array([1, 2, 3], dtype=int32), Array([1, 2, 4], dtype=int32))
-            }
-        """
-        if snapshot_id1 not in self.snapshots or snapshot_id2 not in self.snapshots:
-            raise ValueError("Both PytreeSnapshot IDs must exist.")
-
-        pytree1 = self.snapshots[snapshot_id1].get_pytree(deepcopy=False)
-        pytree2 = self.snapshots[snapshot_id2].get_pytree(deepcopy=False)
-
-        # Unify structures
-        pytree1, pytree2 = self.unify_pytree_structures(pytree1, pytree2)
-
-        def default_comparator(x, y):
-            if isinstance(x, jnp.ndarray) and isinstance(y, jnp.ndarray):
-                return PytreeSnapshotManager.NO_DIFFERENCE if jnp.array_equal(x, y) else (x, y)
-            if isinstance(x, np.ndarray) and isinstance(y, np.ndarray):
-                return PytreeSnapshotManager.NO_DIFFERENCE if np.array_equal(x, y) else (x, y)
-            if isinstance(x, (int, float, str, bool)) and isinstance(
-                y, (int, float, str, bool)
-            ):
-                return (x, y) if x != y else PytreeSnapshotManager.NO_DIFFERENCE
-            if type(x) != type(y) or x != y:
-                return (x, y)
-            return PytreeSnapshotManager.NO_DIFFERENCE
-
-        comparator = (
-            (lambda x, y: PytreeSnapshotManager.NO_DIFFERENCE if custom_comparator(x, y) else (x, y))
-            if custom_comparator
-            else default_comparator
-        )
-
-        def collect_differences(x, y):
-            # Apply condition
-            if condition and not (condition(x) and condition(y)):
-                return PytreeSnapshotManager.NOT_COMPARED  # Represent excluded elements with Ellipsis
-            result = comparator(x, y)
-            return result if result is not None else None
-
-        differences = jax.tree.map(collect_differences, pytree1, pytree2)
-
-        return differences
-
-    @staticmethod
-    def unify_pytree_structures(pytree1, pytree2):
-                                
-        """
-        Align the structures of two PyTrees, filling in missing keys or elements with a placeholder.
-
-        Args:
-            pytree1: The first PyTree (can be a nested dict/list/tuple).
-            pytree2: The second PyTree (can be a nested dict/list/tuple).
-            
-        Returns:
-            Tuple: Two PyTrees with unified structure.
-        """
-        if isinstance(pytree1, dict) and isinstance(pytree2, dict):
-            # Union of all keys
-            all_keys = set(pytree1.keys()).union(pytree2.keys())
-            aligned1 = {}
-            aligned2 = {}
-            for key in all_keys:
-                aligned1[key], aligned2[key] = (
-                    PytreeSnapshotManager.unify_pytree_structures(
-                        pytree1.get(key, PytreeSnapshotManager.LEAF_MISSING),
-                        pytree2.get(key, PytreeSnapshotManager.LEAF_MISSING)
-                        )
-                    )
-            return aligned1, aligned2
-        elif isinstance(pytree1, (list, tuple)) and isinstance(pytree2, (list, tuple)):
-            # Align lists/tuples
-            max_len = max(len(pytree1), len(pytree2))
-            aligned1 = list(pytree1) + [PytreeSnapshotManager.LEAF_MISSING] * (max_len - len(pytree1))
-            aligned2 = list(pytree2) + [PytreeSnapshotManager.LEAF_MISSING] * (max_len - len(pytree2))
-            if isinstance(pytree1, tuple):
-                aligned1 = tuple(aligned1)
-            if isinstance(pytree2, tuple):
-                aligned2 = tuple(aligned2)
-            return aligned1, aligned2
-        else:
-            # For leaves or mismatched types, return as-is
-            return pytree1, pytree2
-
-    # State Persistence
-
+   
     def save_state(self, file_path, compress=False):
         """
         Save the current state of the PytreeSnapshotManager to a file.
@@ -751,7 +603,7 @@ class PytreeSnapshotManager:
         manager.snapshot_order = state["snapshot_order"]
         return manager
 
-    # private
+   # private
 
     def _remove_snapshot(self, snapshot_id):
         """

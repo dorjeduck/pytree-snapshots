@@ -24,7 +24,7 @@ print("All snapshots:", manager.list_snapshots())
 # Get snapshots created in a specific time range
 start_time = manager.snapshots[snapshot_id1].timestamp
 end_time = manager.snapshots[snapshot_id2].timestamp + 1  # Extend range slightly
-time_range_snapshots = manager.get_snapshots_by_time_range(start_time, end_time)
+time_range_snapshots = manager.find_snapshots_by_time_range(start_time, end_time)
 
 print("Snapshots created in time range:", time_range_snapshots)
 
