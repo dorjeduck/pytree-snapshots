@@ -126,12 +126,7 @@ Explore the [`examples` folder](./examples) for additional demos showcasing vari
 
 ## Contribution
 
-We welcome contributions to PyTree Snapshots! Here’s how you can get involved:
-
-1. Fork the Repository:
-    - Start by forking the GitHub repository.
-2. Create a Branch:
-    - Create a feature branch for your changes:
+We warmly welcome contributions and look forward to your pull requests!
 
 ## Changelog
 
