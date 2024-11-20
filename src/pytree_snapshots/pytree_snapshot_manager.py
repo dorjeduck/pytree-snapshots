@@ -351,6 +351,25 @@ class PytreeSnapshotManager:
         """
         return len(self.snapshots)
 
+    def find_snapshots_by_content(manager, query_func):
+        """
+        Find snapshots that match a condition in their content.
+
+        Args:
+            manager (PytreeSnapshotManager): The snapshot manager instance.
+            query_func (callable): A function that takes a PyTree and returns True if it matches the query.
+
+        Returns:
+            list: IDs of snapshots whose content matches the query.
+        """
+        matching_snapshots = []
+        for snapshot_id in manager.list_snapshots():
+            pytree = manager.get_snapshot(snapshot_id, deepcopy=False)
+            if query_func(pytree):
+                matching_snapshots.append(snapshot_id)
+        return matching_snapshots
+        
+    
     def find_snapshots_by_metadata(self, key, value=None):
         """
         Find all PytreeSnapshots that contain a specific metadata key and optionally a specific value.

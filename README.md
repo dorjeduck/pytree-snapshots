@@ -7,8 +7,9 @@ A lightweight and flexible manager for capturing, managing, and comparing PyTree
 ## Features
 
 - Save and retrieve snapshots of PyTrees.
-- Compare differences between snapshots with unified structures.
-- Metadata and tagging support for organization.
+- Compare differences between snapshots.
+- Metadata and tagging support.
+- Basic snapshot query support. 
 - Support for custom PyTree nodes.
 
 ## Installation
