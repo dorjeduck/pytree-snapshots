@@ -29,7 +29,7 @@ pip install .
 
 ## Quick Start
 
-### Example 1: Basic Snapshot Comparison
+### Example 1: Save and retrieve snapshots
 
 Basic example demonstrating how to save and retrieve snapshots of PyTrees.
 
