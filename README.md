@@ -135,6 +135,8 @@ We welcome contributions to PyTree Snapshots! Here’s how you can get involved:
 
 ## Changelog
 
+- 2024.11.20
+  - PyTree comparison removed - for now.
 - 2024.11.18
   - Initial repository setup and first commit.
 
