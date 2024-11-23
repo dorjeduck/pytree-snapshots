@@ -2,6 +2,8 @@
 
 A lightweight and flexible manager for capturing and managing data snapshots in Python. While built with JAX PyTrees in mind, it works seamlessly with any Python object, offering a versatile solution for snapshotting and restoring complex data structures.
 
+**Note:** PyTree Snapshots is currently in **beta**. While it is stable for most use cases, some features may undergo changes, and you may encounter bugs as we gather feedback and refine the library. Please report any issues to help us improve!
+
 ## Features
 
 - **Capture and Manage Snapshots**: Save and retrieve snapshots of data structures with ease.
@@ -128,7 +130,7 @@ In contrast, a **shallow copy** or direct reference means changes to the retriev
 
 By default, snapshots are returned as deep copies, ensuring that modifications to the retrieved PyTree do not affect the stored snapshot.
 
-You can override this behavior globally when initializing the SnapshotManager. 
+You can override this behavior globally when initializing the SnapshotManager.
 
 ```python
 manager = SnapshotManager(deepcopy=False)
@@ -202,6 +204,7 @@ We warmly welcome contributions and look forward to your pull requests!
 - 2024.11.23
   - Refactored
   - Logic Queries
+  - PyTree specialization
 - 2024.11.20
   - PyTree comparison removed - for now.
 - 2024.11.18
