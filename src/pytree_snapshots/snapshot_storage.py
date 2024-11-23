@@ -1,3 +1,6 @@
+import copy
+
+
 class SnapshotStorage:
     def __init__(self, max_snapshots=None):
         """
@@ -41,22 +44,21 @@ class SnapshotStorage:
             self.snapshots[snapshot_id] = pytree_snapshot
             self.snapshot_order.append(snapshot_id)
 
-    def get_snapshot(self, snapshot_id):
+    def get_snapshot(self, snapshot_id, deepcopy=True):
         """
-        Retrieves a Snapshot by its ID.
+        Retrieve a snapshot by its ID.
 
         Args:
-            snapshot_id (str): The ID of the snapshot.
+            snapshot_id (str): The ID of the snapshot to retrieve.
+            deepcopy (bool, optional): Whether to return a deep copy of the snapshot. Defaults to True.
 
         Returns:
-            Snapshot: The corresponding Snapshot object.
-
-        Raises:
-            ValueError: If the snapshot ID does not exist.
+            Snapshot: The requested snapshot.
         """
-        if snapshot_id not in self.snapshots:
-            raise ValueError(f"Snapshot ID '{snapshot_id}' does not exist.")
-        return self.snapshots[snapshot_id]
+        snapshot = self.snapshots.get(snapshot_id)
+        if snapshot is None:
+            raise KeyError(f"Snapshot with ID {snapshot_id} not found.")
+        return copy.deepcopy(snapshot) if deepcopy else snapshot
 
     def get_latest_snapshot_id(self):
         """

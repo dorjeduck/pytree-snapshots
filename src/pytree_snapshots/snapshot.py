@@ -5,12 +5,12 @@ import copy
 
 
 class Snapshot:
-    def __init__(self, pytree, metadata=None, tags=None, compress=False):
+    def __init__(self, data, metadata=None, tags=None, compress=False):
         """
         Initialize a Snapshot instance.
 
         Args:
-            pytree: The data structure to store in the snapshot.
+            data: The data structure to store in the snapshot.
             metadata (dict, optional): User-defined metadata.
             tags (list, optional): Tags associated with the snapshot.
             compress (bool, optional): Whether to compress the snapshot data.
@@ -20,13 +20,13 @@ class Snapshot:
         self.tags = list(tags or [])
         self.compress = compress
 
-        # Store the pytree, compressing it if needed
-        self.pytree = self._compress(pytree) if compress else pytree
+        # Store the data, compressing it if needed
+        self.data = self._compress(data) if compress else data
 
     def to_dict(self):
         """Convert the snapshot to a dictionary for serialization."""
         return {
-            "pytree": self._decompress() if self.compress else self.pytree,
+            "data": self._decompress() if self.compress else self.data,
             "metadata": self.metadata,
             "tags": self.tags,
             "compress": self.compress,
@@ -37,40 +37,40 @@ class Snapshot:
     def from_dict(cls, data):
         """Recreate a snapshot from a dictionary."""
         return cls(
-            pytree=data["pytree"],
+            data=data["data"],
             metadata=data.get("metadata"),
             tags=data.get("tags"),
             compress=data.get("compress", False),
         )
 
-    def _compress(self, pytree):
+    def _compress(self, data):
         try:
-            return zlib.compress(pickle.dumps(pytree))
+            return zlib.compress(pickle.dumps(data))
         except Exception as e:
             raise RuntimeError("Compression failed") from e
 
     def _decompress(self):
         try:
             return (
-                pickle.loads(zlib.decompress(self.pytree))
+                pickle.loads(zlib.decompress(self.data))
                 if self.compress
-                else self.pytree
+                else self.data
             )
         except Exception as e:
             raise RuntimeError("Decompression failed") from e
 
-    def get_pytree(self, deepcopy=True):
+    def get_data(self, deepcopy=True):
         """
-        Retrieve the pytree, decompressing if needed.
+        Retrieve the stored data, decompressing if needed.
 
         Args:
             deepcopy (bool, optional): Whether to return a deep copy.
 
         Returns:
-            The pytree.
+            The stored data.
         """
-        pytree = self._decompress() if self.compress else self.pytree
-        return copy.deepcopy(pytree) if deepcopy else pytree
+        data = self._decompress() if self.compress else self.data
+        return copy.deepcopy(data) if deepcopy else data
 
     def add_tags(self, tags):
         """

@@ -85,12 +85,13 @@ class ByTimeRangeQuery(Query):
         """
         return self.start_time <= snapshot.timestamp <= self.end_time
 
+
 class ByContentQuery(Query):
     """
     Query to filter snapshots based on their content.
 
     Args:
-        query_func (callable): A function that takes a snapshot's content (PyTree) 
+        query_func (callable): A function that takes a snapshot's content (PyTree)
                                and returns True if the snapshot matches the query.
     """
 
@@ -109,4 +110,4 @@ class ByContentQuery(Query):
         Returns:
             bool: True if the snapshot's content matches the query function, False otherwise.
         """
-        return self.query_func(snapshot.get_pytree())
+        return self.query_func(snapshot.get_data())

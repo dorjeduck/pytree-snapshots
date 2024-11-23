@@ -1,12 +1,15 @@
 # PyTree Snapshots
 
-A lightweight and flexible manager for capturing and managing `PyTree` snapshots in JAX, currently in Beta.
+A lightweight and flexible manager for capturing and managing data snapshots in Python. While built with JAX PyTrees in mind, it works seamlessly with any Python object, offering a versatile solution for snapshotting and restoring complex data structures.
 
 ## Features
 
-- Save and retrieve snapshots of PyTrees.
-- Metadata and tagging support.
-- Snapshot query support.
+- **Capture and Manage Snapshots**: Save and retrieve snapshots of data structures with ease.
+- **General-Purpose Compatibility**: Works seamlessly with any Python object.
+- **Metadata and Tagging**: Organize snapshots with metadata and tags for better discoverability.
+- **Advanced Query Support**: Perform complex searches using metadata, tags, time ranges, or custom criteria.
+- **Deepcopy and Compression Options**: Fine-tune storage and retrieval behavior to balance performance and memory usage.
+- **Designed for PyTrees**: Includes specialized features for JAX PyTrees, such as validation and transformations.
 
 ## Installation
 
@@ -29,7 +32,7 @@ pip install .
 
 ## Quick Start
 
-### Example 1: Save and retrieve snapshots
+### Save and retrieve snapshots
 
 Basic example demonstrating how to save and retrieve snapshots of PyTrees.
 
@@ -49,7 +52,30 @@ print("Retrieved snapshot:", retrieved)
 # Output: Retrieved snapshot: {'a': 1, 'b': 2}
 ```
 
-### Example 2: Managing Snapshots with Tags
+### PyTree-Specific Example: Save and Transform PyTrees
+
+For JAX users, here’s an example demonstrating PyTree-specific functionality.
+
+```python
+from pytree_snapshots import PyTreeSnapshotManager
+
+# Initialize the PyTree manager
+manager = PyTreeSnapshotManager()
+
+# Save a PyTree
+pytree = {"a": 1, "b": [2, 3]}
+snapshot_id = manager.save_snapshot(pytree, metadata={"experiment": "baseline"})
+
+# Apply a transformation to the PyTree
+def square_leaf(x):
+    return x ** 2 if isinstance(x, int) else x
+
+transformed_pytree = manager.apply_leaf_transformation(snapshot_id, square_leaf)
+print("Transformed PyTree:", transformed_pytree)
+# Output: {'a': 1, 'b': [4, 9]}
+```
+
+### Managing Snapshots with Tags
 
 This example shows how to organize snapshots using tags, search for snapshots by tags, and retrieve specific snapshots for inspection.
 
@@ -164,6 +190,7 @@ Compressed snapshots are automatically decompressed when retrieved.
 
 ## Roadmap
 
+- Expanding PyTree-specific functionality to enhance JAX integration.
 - Listening to feedback ...
 
 ## Contribution

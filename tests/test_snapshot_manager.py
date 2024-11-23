@@ -11,7 +11,6 @@ from pytree_snapshots.query import (
     ByContentQuery,
 )
 
-
 @pytest.fixture
 def setup_manager():
     """Fixture to set up a SnapshotManager instance."""
@@ -227,7 +226,7 @@ def test_remove_snapshot(setup_manager):
     manager.remove_snapshot(snapshot_id1)
 
     # Verify the snapshot is removed
-    with pytest.raises(ValueError, match="Snapshot ID .* does not exist"):
+    with pytest.raises(KeyError, match="Snapshot with ID .* not found"):
         manager.get_snapshot(snapshot_id1)
 
     # Verify the remaining snapshot is unaffected

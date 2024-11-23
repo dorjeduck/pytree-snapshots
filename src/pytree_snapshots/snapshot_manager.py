@@ -5,7 +5,7 @@ from .snapshot_storage import SnapshotStorage
 from .snapshot_persistence import SnapshotPersistence
 from .query import SnapshotQueryInterface, SnapshotQuery
 
-DEFAULT = object()
+from pytree_snapshots.constants import DEFAULT
 
 
 class SnapshotManager:
@@ -65,7 +65,7 @@ class SnapshotManager:
         # Retrieve the snapshot and return its PyTree
         snapshot = self.storage.get_snapshot(snapshot_id)
 
-        return snapshot.get_pytree(self._should_deepcopy(deepcopy))
+        return snapshot.get_data(self._should_deepcopy(deepcopy))
 
     # Save, Retrieve, and Delete PytreeSnapshots
 
@@ -113,7 +113,7 @@ class SnapshotManager:
             ValueError: If the snapshot ID does not exist.
         """
         snapshot = self.storage.get_snapshot(snapshot_id)
-        return snapshot.get_pytree(self._should_deepcopy(deepcopy))
+        return snapshot.get_data(self._should_deepcopy(deepcopy))
 
     def get_latest_snapshot(self, deepcopy=DEFAULT):
         """
@@ -131,7 +131,7 @@ class SnapshotManager:
         # Use storage to get the latest snapshot
         snapshot_id = self.storage.get_latest_snapshot_id()
         snapshot = self.storage.get_snapshot(snapshot_id)
-        return snapshot.get_pytree(self._should_deepcopy(deepcopy))
+        return snapshot.get_data(self._should_deepcopy(deepcopy))
 
     def remove_snapshot(self, snapshot_id):
         """
@@ -162,7 +162,7 @@ class SnapshotManager:
         original_snapshot = self.storage.get_snapshot(snapshot_id)
 
         # Create a deep copy of the original PyTree
-        cloned_pytree = original_snapshot.get_pytree(self.deepcopy)
+        cloned_pytree = original_snapshot.get_data(self.deepcopy)
 
         # Merge metadata (if provided) with the original snapshot's metadata
         cloned_metadata = original_snapshot.metadata.copy()
@@ -216,7 +216,7 @@ class SnapshotManager:
         if not isinstance(new_metadata, dict):
             raise TypeError("new_metadata must be a dictionary.")
 
-        snapshot = self.storage.get_snapshot(snapshot_id)
+        snapshot = self.storage.get_snapshot(snapshot_id, False)
         snapshot.metadata.update(new_metadata)
 
     # Tag Management
@@ -235,7 +235,7 @@ class SnapshotManager:
         if not isinstance(tags, list):
             raise TypeError("tags must be a list.")
 
-        snapshot = self.storage.get_snapshot(snapshot_id)
+        snapshot = self.storage.get_snapshot(snapshot_id, False)
         snapshot.add_tags(tags)
 
     def get_tags(self, snapshot_id):
@@ -255,7 +255,7 @@ class SnapshotManager:
             Retrieve tags:
                 tags = manager.get_tags("snapshot_id")
         """
-        snapshot = self.storage.get_snapshot(snapshot_id)
+        snapshot = self.storage.get_snapshot(snapshot_id, False)
         return snapshot.tags
 
     def remove_tags(self, snapshot_id, tags):
@@ -273,7 +273,7 @@ class SnapshotManager:
             Remove tags from a Snapshot:
                 manager.remove_tags("snap_id", ["obsolete"])
         """
-        snapshot = self.storage.get_snapshot(snapshot_id)
+        snapshot = self.storage.get_snapshot(snapshot_id, False)
         snapshot.remove_tags(tags)
 
     # Querying and Listing PytreeSnapshots
@@ -350,7 +350,7 @@ class SnapshotManager:
         # Get the oldest snapshot ID from the storage
         snapshot_id = self.storage.snapshot_order[0]
         snapshot = self.storage.get_snapshot(snapshot_id)
-        return snapshot.get_pytree(self._should_deepcopy(deepcopy))
+        return snapshot.get_data(self._should_deepcopy(deepcopy))
 
     def list_snapshots_by_age(self, ascending=True):
         """
@@ -386,7 +386,7 @@ class SnapshotManager:
         SnapshotPersistence.save_state(self, file_path, compress)
 
     @staticmethod
-    def load_state(file_path, decompress=False):
+    def load_state(file_path):
         """
         Load a SnapshotManager state from a file.
 
@@ -397,7 +397,7 @@ class SnapshotManager:
         Returns:
             SnapshotManager: A new manager instance with the loaded state.
         """
-        state = SnapshotPersistence.load_state(file_path, decompress)
+        state = SnapshotPersistence.load_state(file_path)
 
         # Create a new manager with the loaded state
         manager = SnapshotManager(
