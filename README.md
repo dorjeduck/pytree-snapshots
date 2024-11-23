@@ -6,7 +6,7 @@ A lightweight and flexible manager for capturing and managing `PyTree` snapshots
 
 - Save and retrieve snapshots of PyTrees.
 - Metadata and tagging support.
-- Basic snapshot query support.
+- Snapshot query support.
 
 ## Installation
 
@@ -225,7 +225,6 @@ Explore the [`examples` folder](./examples) for additional demos showcasing vari
 
 ## Roadmap
 
-- Improve metadata and tag querying capabilities.
 - Listening to feedback ...
 
 ## Contribution
