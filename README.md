@@ -1,6 +1,6 @@
 # PyTree Snapshots
 
-A lightweight and flexible manager for capturing and managing data snapshots in Python. While built with JAX PyTrees in mind, it works seamlessly with any Python object, offering a versatile solution for snapshotting and restoring complex data structures.
+A lightweight and flexible manager for capturing and managing data snapshots in Python. While built with **JAX PyTrees** in mind, offering specialized features like leaf transformations and structure-based queries, it also works seamlessly with any Python object, making it a versatile solution for snapshotting and restoring complex data structures.
 
 **Note:** PyTree Snapshots is currently in **beta**. While it is stable for most use cases, some features may undergo changes, and you may encounter bugs as we gather feedback and refine the library. Please report any issues to help us improve!
 
@@ -11,7 +11,7 @@ A lightweight and flexible manager for capturing and managing data snapshots in 
 - **Metadata and Tagging**: Organize snapshots with metadata and tags for better discoverability.
 - **Advanced Query Support**: Perform complex searches using metadata, tags, time ranges, or custom criteria.
 - **Deepcopy and Compression Options**: Fine-tune storage and retrieval behavior to balance performance and memory usage.
-- **Designed for PyTrees**: Includes specialized features for JAX PyTrees, such as validation and transformations.
+- **Designed for PyTrees**: Includes specialized features for JAX PyTrees, such as validation, transformations and PyTree-specific queries. (more to come)
 
 ## Installation
 
@@ -54,7 +54,7 @@ print("Retrieved snapshot:", retrieved)
 # Output: Retrieved snapshot: {'a': 1, 'b': 2}
 ```
 
-### PyTree-Specific Example: Save and Transform PyTrees
+### Save and Transform PyTrees
 
 For JAX users, here’s an example demonstrating PyTree-specific functionality.
 
