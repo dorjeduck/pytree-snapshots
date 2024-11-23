@@ -1,4 +1,4 @@
-from .query_base import Query
+from .base_queries import Query
 
 class AndQuery(Query):
     def __init__(self, *queries):

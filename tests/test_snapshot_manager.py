@@ -272,3 +272,42 @@ def test_snapshot_order_after_state_restore(tmp_path, setup_manager):
     assert (
         restored_manager.storage.snapshot_order == manager.storage.snapshot_order
     ), "Snapshot order was not preserved after restoring state."
+
+from pytree_snapshots.pytree_snapshot_manager import PyTreeSnapshotManager
+import jax.numpy as jnp
+
+def test_query_by_leaf_value_simple_condition():
+    """Test querying snapshots with a simple condition on leaf values."""
+    manager = PyTreeSnapshotManager()
+
+    # Save PyTree snapshots
+    manager.save_snapshot({"a": jnp.array([1, 2, 3]), "b": {"x": jnp.array([4, 5])}}, snapshot_id="snap1")
+    manager.save_snapshot({"x": jnp.array([6, 7, 8]), "y": {"z": jnp.array([9])}}, snapshot_id="snap2")
+    manager.save_snapshot({"p": jnp.array([-1, -2])}, snapshot_id="snap3")
+
+    # Query for snapshots where any leaf contains a value > 5
+    query = manager.query.by_leaf_value(lambda x: jnp.any(x > 5))
+    results = manager.query.evaluate(query)
+
+    # Assert that only the relevant snapshots are returned
+    assert "snap2" in results, "Snapshot with leaf value > 5 is missing."
+    assert "snap1" not in results, "Snapshot with no leaf value > 5 is incorrectly included."
+    assert "snap3" not in results, "Snapshot with no leaf value > 5 is incorrectly included."
+
+def test_query_by_leaf_value_complex_condition():
+    """Test querying snapshots with a complex condition on leaf values."""
+    manager = PyTreeSnapshotManager()
+
+    # Save PyTree snapshots
+    manager.save_snapshot({"a": jnp.array([1, 2, 3]), "b": {"x": jnp.array([4, 5])}}, snapshot_id="snap1")
+    manager.save_snapshot({"x": jnp.array([-6, 7, 8]), "y": {"z": jnp.array([9])}}, snapshot_id="snap2")
+    manager.save_snapshot({"p": jnp.array([-1, -2])}, snapshot_id="snap3")
+
+    # Query for snapshots where any leaf contains a negative value
+    query = manager.query.by_leaf_value(lambda x: jnp.any(x < 0))
+    results = manager.query.evaluate(query)
+
+    # Assert that the relevant snapshots are returned
+    assert "snap3" in results, "Snapshot with negative leaf values is missing."
+    assert "snap2" in results, "Snapshot with negative leaf values is missing."
+    assert "snap1" not in results, "Snapshot with no negative leaf values is incorrectly included."

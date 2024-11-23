@@ -1,7 +1,7 @@
 import time
 from pytree_snapshots import SnapshotManager
 from pytree_snapshots.query.logical_queries import AndQuery
-from pytree_snapshots.query.query_base import ByTimeRangeQuery, ByMetadataQuery
+from pytree_snapshots.query.base_queries import ByTimeRangeQuery, ByMetadataQuery
 
 # Initialize the manager
 manager = SnapshotManager()

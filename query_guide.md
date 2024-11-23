@@ -6,7 +6,7 @@ PyTree Snapshots provides a flexible and powerful query system to retrieve snaps
 
 Every snapshot saved using SnapshotManager is automatically assigned a timestamp. This timestamp is managed internally and represents the time when the snapshot was saved. You can use the ByTimeRangeQuery to filter snapshots based on these timestamps.
 
-```python 
+```python
 import time
 from pytree_snapshots import SnapshotManager
 from pytree_snapshots.query import ByTimeRangeQuery
@@ -32,6 +32,8 @@ results = manager.query.evaluate(query)
 print("Snapshots saved in the last 2 seconds:", results)
 # Output: ['snap3']
 ```
+
+This example shows how to query snapshots where any leaf in the PyTree satisfies a specific condition, such as being greater than a certain value.
 
 ## Custom Criteria for Selecting Snapshots
 
@@ -172,4 +174,37 @@ results = manager.query.evaluate(query)
 print("Snapshots matching the logical query:", results)
 # Output:
 # Snapshots matching the logical query: ['snap1', 'snap3']
+```
+
+## Querying Snapshots by PyTree Leaf Values
+
+```python
+from pytree_snapshots import PyTreeSnapshotManager
+
+# Initialize the PyTree manager
+manager = PyTreeSnapshotManager()
+
+# Save snapshots with PyTree data
+manager.save_snapshot(
+    {"a": 1, "b": [2, 3]},
+    snapshot_id="snap1",
+    metadata={"project": "example1"},
+)
+manager.save_snapshot(
+    {"x": 5, "y": {"z": 10}},
+    snapshot_id="snap2",
+    metadata={"project": "example2"},
+)
+manager.save_snapshot(
+    {"c": [0, -1], "d": 7},
+    snapshot_id="snap3",
+    metadata={"project": "example1"},
+)
+
+# Query snapshots with any leaf value greater than 5
+query = manager.query.by_leaf_value(lambda x: x > 5)
+results = manager.query.evaluate(query)
+
+print("Snapshots with a leaf value > 5:", results)
+# Output: Snapshots with a leaf value > 5: ['snap2', 'snap3']
 ```

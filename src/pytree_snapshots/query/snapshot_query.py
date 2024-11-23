@@ -1,5 +1,5 @@
 from .snapshot_query_interface import SnapshotQueryInterface
-from .query_base import (
+from .base_queries import (
     Query,
     ByMetadataQuery,
     ByTagQuery,

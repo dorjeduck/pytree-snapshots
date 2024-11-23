@@ -1,11 +1,34 @@
 import uuid
 
-from pytree_snapshots.snapshot_manager import SnapshotManager
-from pytree_snapshots.pytree_snapshot import PyTreeSnapshot
-from pytree_snapshots.constants import DEFAULT
+from .snapshot_manager import SnapshotManager
+from .pytree_snapshot import PyTreeSnapshot
+from .query import PyTreeSnapshotQuery, PyTreeSnapshotQueryInterface
+
+from .constants import DEFAULT
 
 
 class PyTreeSnapshotManager(SnapshotManager):
+
+    def __init__(self, *args, query_class=None, **kwargs):
+        """
+        Initialize the PyTreeSnapshotManager.
+
+        Args:
+            query_class (type, optional): A class implementing PyTreeSnapshotQueryInterface.
+                                           Defaults to PyTreeSnapshotQuery.
+        """
+        # Default to PyTreeSnapshotQuery if no query class is provided
+        query_class = query_class or PyTreeSnapshotQuery
+
+        # Validate that the provided query class implements PyTreeSnapshotQueryInterface
+        if not issubclass(query_class, PyTreeSnapshotQueryInterface):
+            raise TypeError(
+                f"The query_class must implement PyTreeSnapshotQueryInterface. "
+                f"Received: {query_class.__name__}"
+            )
+
+        super().__init__(*args, query_class=query_class, **kwargs)
+
     def save_snapshot(
         self,
         pytree,
@@ -42,7 +65,7 @@ class PyTreeSnapshotManager(SnapshotManager):
         Args:
             snapshot_ids (str or list): The ID(s) of the snapshot(s) to transform.
             func (callable): A function to apply to each leaf of the PyTree.
-            deepcopy (bool): Whether to return a deep copy of the transformed PyTree(s). 
+            deepcopy (bool): Whether to return a deep copy of the transformed PyTree(s).
                             Defaults to the manager's deepcopy setting.
 
         Returns:
@@ -64,9 +87,13 @@ class PyTreeSnapshotManager(SnapshotManager):
             for snapshot_id in snapshot_ids:
                 snapshot = self.storage.get_snapshot(snapshot_id, deepcopy=deepcopy)
                 if not isinstance(snapshot, PyTreeSnapshot):
-                    raise TypeError(f"Snapshot with ID {snapshot_id} is not a PyTreeSnapshot.")
+                    raise TypeError(
+                        f"Snapshot with ID {snapshot_id} is not a PyTreeSnapshot."
+                    )
                 transformed_pytree_list.append(snapshot.apply_leaf_transformation(func))
             return transformed_pytree_list
 
         else:
-            raise TypeError("snapshot_ids must be a string (single ID) or a list of strings (multiple IDs).")
+            raise TypeError(
+                "snapshot_ids must be a string (single ID) or a list of strings (multiple IDs)."
+            )

@@ -1,5 +1,5 @@
 from pytree_snapshots import SnapshotManager
-from pytree_snapshots.query.query_base import ByMetadataQuery
+from pytree_snapshots.query.base_queries import ByMetadataQuery
 
 # Initialize the manager
 manager = SnapshotManager()
