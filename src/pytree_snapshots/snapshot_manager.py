@@ -3,8 +3,8 @@ import uuid
 from .snapshot import Snapshot
 from .snapshot_storage import SnapshotStorage
 from .snapshot_persistence import SnapshotPersistence
-from .snapshot_query_interface import SnapshotQueryInterface
-from .snapshot_query import SnapshotQuery
+from .query.snapshot_query_interface import SnapshotQueryInterface
+from .query.snapshot_query import SnapshotQuery
 
 DEFAULT = object()
 
@@ -23,6 +23,8 @@ class SnapshotManager:
             deepcopy (bool): Whether to return deep copies of PyTrees by default. Defaults to True.
             query_class (type, optional): A class implementing SnapshotQueryInterface. Defaults to SnapshotQuery.
         """
+        if query_class and not issubclass(query_class, SnapshotQueryInterface):
+            raise TypeError("query_class must implement SnapshotQueryInterface.")
         self.storage = SnapshotStorage(max_snapshots=max_snapshots)
         self.query = (query_class or SnapshotQuery)(self.storage.snapshots)
         self.deepcopy = deepcopy

@@ -72,3 +72,16 @@ class SnapshotQueryInterface(ABC):
             list: Snapshot IDs that match the condition.
         """
         pass
+
+    @abstractmethod
+    def evaluate(self, query):
+        """
+        Evaluate a complex query against all snapshots.
+
+        Args:
+            query: A query object to evaluate.
+
+        Returns:
+            list: Snapshot IDs matching the criteria.
+        """
+        pass

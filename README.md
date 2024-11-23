@@ -119,15 +119,16 @@ print(f"Oldest snapshot: {oldest_snapshot_id}")
 
 ### Example 4: Custom SnapshotQuery
 
-In this example, we’ll create a custom query class that logs each query operation for debugging purposes.
+In this example, we’ll create a custom query class that logs certain query operation for debugging purposes.
 
 ```python
-from pytree_snapshots import SnapshotManager, SnapshotQueryInterface
+from pytree_snapshots import SnapshotManager, SnapshotQuery
 
-class LoggingSnapshotQuery(SnapshotQueryInterface):
+class LoggingSnapshotQuery(SnapshotQuery):
     """
     A custom SnapshotQuery that logs all query operations.
     """
+
     def __init__(self, snapshots):
         self.snapshots = snapshots
 
@@ -136,7 +137,8 @@ class LoggingSnapshotQuery(SnapshotQueryInterface):
         return [
             snapshot_id
             for snapshot_id, snapshot in self.snapshots.items()
-            if key in snapshot.metadata and (value is None or snapshot.metadata[key] == value)
+            if key in snapshot.metadata
+            and (value is None or snapshot.metadata[key] == value)
         ]
 
     def by_tag(self, tag):
@@ -147,37 +149,23 @@ class LoggingSnapshotQuery(SnapshotQueryInterface):
             if tag in snapshot.tags
         ]
 
-    def by_time_range(self, start_time, end_time):
-        print(f"Querying by time range: {start_time} to {end_time}")
-        return [
-            snapshot_id
-            for snapshot_id, snapshot in self.snapshots.items()
-            if start_time <= snapshot.timestamp <= end_time
-        ]
-
-    def by_comparator(self, comparator):
-        print(f"Querying using comparator")
-        selected_snapshot_id, selected_snapshot = None, None
-        for snapshot_id, snapshot in self.snapshots.items():
-            if selected_snapshot is None or comparator(snapshot, selected_snapshot):
-                selected_snapshot_id = snapshot_id
-                selected_snapshot = snapshot
-        return selected_snapshot_id
-
-    def by_content(self, query_func):
-        print("Querying by content")
-        return [
-            snapshot_id
-            for snapshot_id, snapshot in self.snapshots.items()
-            if query_func(snapshot.get_pytree())
-        ]
 
 # Inject the custom query class into SnapshotManager
 manager = SnapshotManager(query_class=LoggingSnapshotQuery)
 
 # Save some snapshots
-manager.save_snapshot({"a": 1, "b": 2}, metadata={"project": "example1"}, tags=["experiment"],snapshot_id="snap1")
-manager.save_snapshot({"x": 10, "y": 20}, metadata={"project": "example2"}, tags=["control"],snapshot_id="snap2")
+manager.save_snapshot(
+    {"a": 1, "b": 2},
+    metadata={"project": "example1"},
+    tags=["experiment"],
+    snapshot_id="snap1",
+)
+manager.save_snapshot(
+    {"x": 10, "y": 20},
+    metadata={"project": "example2"},
+    tags=["control"],
+    snapshot_id="snap2",
+)
 
 # Perform queries
 
@@ -191,6 +179,46 @@ print("Tag query results:", manager.query.by_tag("control"))
 # Querying by tag: control
 # Tag query results: ['snap2']
 
+```
+
+### Example 5: Nested Logical Queries
+
+This example demonstrates how to combine logical operations (AND, OR, NOT) to create complex, nested queries. You can use these queries to filter snapshots based on metadata, tags, content, or other custom criteria.
+
+```python
+from pytree_snapshots import SnapshotManager
+from pytree_snapshots.query.logical_queries import AndQuery, OrQuery, NotQuery
+from pytree_snapshots.query.query_base import ByMetadataQuery, ByTagQuery
+
+# Initialize the manager
+manager = SnapshotManager()
+
+# Save snapshots with metadata and tags
+manager.save_snapshot(
+    {"a": 1}, snapshot_id="snap1", metadata={"project": "example1"}, tags=["experiment", "baseline"]
+)
+manager.save_snapshot(
+    {"b": 2}, snapshot_id="snap2", metadata={"project": "example2"}, tags=["control"]
+)
+manager.save_snapshot(
+    {"c": 3}, snapshot_id="snap3", metadata={"project": "example1"}, tags=["experiment", "published"]
+)
+
+# Logical Query: Find snapshots that are in project "example1" AND tagged with "experiment",
+# OR snapshots that are NOT tagged with "control".
+query = OrQuery(
+    AndQuery(
+        ByMetadataQuery("project", "example1"),
+        ByTagQuery("experiment")
+    ),
+    NotQuery(ByTagQuery("control"))
+)
+
+# Evaluate the query
+results = manager.query.evaluate(query)
+print("Snapshots matching the logical query:", results)
+# Output:
+# Snapshots matching the logical query: ['snap1', 'snap3']
 ```
 
 Explore the [`examples` folder](./examples) for additional demos showcasing various features and use cases.
@@ -208,6 +236,7 @@ We warmly welcome contributions and look forward to your pull requests!
 
 - 2024.11.23
   - Refactored
+  - Logic Queries
 - 2024.11.20
   - PyTree comparison removed - for now.
 - 2024.11.18

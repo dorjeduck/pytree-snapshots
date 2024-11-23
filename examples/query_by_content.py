@@ -26,8 +26,8 @@ def query_func(pytree):
     return pytree.get("b") == 42
 
 
-# Use find_snapshots_by_content to find matching snapshots
-matching_snapshots = manager.query.find_snapshots_by_content(query_func)
+# Use by_content to find matching snapshots
+matching_snapshots = manager.query.by_content(query_func)
 
 # Display the matching snapshot IDs
 print(f"Snapshots matching the query: {matching_snapshots}")
@@ -50,8 +50,8 @@ snapshot_id4 = manager.save_snapshot(
     {"nested": {"key": "target"}, "b": 42}, snapshot_id="snap4"
 )
 
-# Use find_snapshots_by_content with the nested query
-nested_matches = manager.query.find_snapshots_by_content(nested_query_func)
+# Use by_content with the nested query
+nested_matches = manager.query.by_content(nested_query_func)
 
 print(f"Snapshots matching the nested query: {nested_matches}")
 
