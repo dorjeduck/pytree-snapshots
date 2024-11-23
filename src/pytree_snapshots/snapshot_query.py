@@ -1,4 +1,7 @@
-class SnapshotQuery:
+from .snapshot_query_interface import SnapshotQueryInterface
+
+
+class SnapshotQuery(SnapshotQueryInterface):
     def __init__(self, snapshots):
         """
         Initialize the query class.
@@ -8,7 +11,7 @@ class SnapshotQuery:
         """
         self.snapshots = snapshots
 
-    def find_by_comparator(self, comparator):
+    def by_comparator(self, comparator):
         """
         Find a snapshot by comparing all snapshots using a custom comparator.
 
@@ -24,7 +27,7 @@ class SnapshotQuery:
 
         Examples:
             Find the snapshot with the highest accuracy:
-                selected_snapshot_id = query.find_by_comparator(
+                selected_snapshot_id = query.by_comparator(
                     lambda s1, s2: s1.metadata["accuracy"] > s2.metadata["accuracy"]
                 )
         """
@@ -43,7 +46,7 @@ class SnapshotQuery:
 
         return selected_snapshot_id
 
-    def find_by_metadata(self, key, value=None):
+    def by_metadata(self, key, value=None):
         return [
             snapshot_id
             for snapshot_id, snapshot in self.snapshots.items()
@@ -51,21 +54,21 @@ class SnapshotQuery:
             and (value is None or snapshot.metadata[key] == value)
         ]
 
-    def find_by_tag(self, tag):
+    def by_tag(self, tag):
         return [
             snapshot_id
             for snapshot_id, snapshot in self.snapshots.items()
             if tag in snapshot.tags
         ]
 
-    def find_by_time_range(self, start_time, end_time):
+    def by_time_range(self, start_time, end_time):
         return [
             snapshot_id
             for snapshot_id, snapshot in self.snapshots.items()
             if start_time <= snapshot.timestamp <= end_time
         ]
 
-    def find_by_content(self, query_func):
+    def by_content(self, query_func):
         return [
             snapshot_id
             for snapshot_id, snapshot in self.snapshots.items()

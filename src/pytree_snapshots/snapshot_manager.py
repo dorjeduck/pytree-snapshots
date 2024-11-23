@@ -3,6 +3,7 @@ import uuid
 from .snapshot import Snapshot
 from .snapshot_storage import SnapshotStorage
 from .snapshot_persistence import SnapshotPersistence
+from .snapshot_query_interface import SnapshotQueryInterface
 from .snapshot_query import SnapshotQuery
 
 DEFAULT = object()
@@ -13,18 +14,17 @@ class SnapshotManager:
     A manager for storing and managing PyTree snapshots.
     """
 
-    # Initialization
-
-    def __init__(self, max_snapshots=None, deepcopy=True):
+    def __init__(self, max_snapshots=None, deepcopy=True, query_class=None):
         """
         Initialize the SnapshotManager.
 
         Args:
             max_snapshots (int, optional): Maximum number of snapshots to store. Defaults to None (no limit).
             deepcopy (bool): Whether to return deep copies of PyTrees by default. Defaults to True.
+            query_class (type, optional): A class implementing SnapshotQueryInterface. Defaults to SnapshotQuery.
         """
         self.storage = SnapshotStorage(max_snapshots=max_snapshots)
-        self.query = SnapshotQuery(self.storage.snapshots)
+        self.query = (query_class or SnapshotQuery)(self.storage.snapshots)
         self.deepcopy = deepcopy
 
     def __getitem__(self, index, deepcopy=DEFAULT):
@@ -297,91 +297,6 @@ class SnapshotManager:
                 count = manager.get_snapshot_count()
         """
         return len(self.storage.snapshots)
-
-    def find_snapshots_by_content(self, query_func):
-        """
-        Find snapshots that match a condition in their content.
-
-        Args:
-            query_func (callable): A function that takes a PyTree and returns True if it matches the query.
-
-        Returns:
-            list: IDs of snapshots whose content matches the query.
-
-        Examples:
-            Find snapshots containing a specific structure:
-                ids = manager.find_snapshots_by_content(lambda pytree: "key" in pytree)
-        """
-        return self.query.find_by_content(query_func)
-
-    def find_snapshots_by_metadata(self, key, value=None):
-        """
-        Find all PytreeSnapshots that contain a specific metadata key and optionally a specific value.
-
-        Args:
-            key (str): The metadata key to search for.
-            value (optional): The value to match for the given metadata key. If None, matches any value for the key.
-
-        Returns:
-            list: Snapshot IDs that match the metadata key and value.
-
-        Examples:
-            Find PytreeSnapshots by metadata key:
-                ids = manager.find_snapshots_by_metadata("project")
-        """
-        return self.query.find_by_metadata(key, value)
-
-    def find_snapshots_by_tag(self, tag):
-        """
-        Find all PytreeSnapshots with a specific tag.
-
-        Args:
-            tag (str): The tag to search for.
-
-        Returns:
-            list: Snapshot IDs with the specified tag.
-
-        Examples:
-            Find PytreeSnapshots by tag:
-                ids = manager.find_snapshots_by_tag("experiment")
-        """
-        return self.query.find_by_tag(tag)
-
-    def find_snapshots_by_time_range(self, start_time, end_time):
-        """
-        Retrieve PytreeSnapshots created within a specified time range.
-
-        Args:
-            start_time (float): Start of the time range (UNIX timestamp).
-            end_time (float): End of the time range (UNIX timestamp).
-
-        Returns:
-            list: Snapshot IDs created within the specified time range.
-
-        Examples:
-            Find PytreeSnapshots in a time range:
-                ids = manager.get_snapshots_by_time_range(1690000000.0, 1700000000.0)
-        """
-        return self.query.find_by_time_range(start_time, end_time)
-
-    def find_by_comparator(self, comparator):
-        """
-        Find a snapshot by comparing all snapshots using a custom comparator.
-
-        Args:
-            comparator (callable): A function that takes two snapshots and returns
-                True if the first snapshot is "better" than the second.
-
-        Returns:
-            str: The ID of the snapshot that satisfies the criterion, or None if no snapshots exist.
-
-        Examples:
-            Find the snapshot with the highest accuracy:
-                selected_snapshot_id = manager.get_snapshot_by_comparator(
-                    lambda s1, s2: s1.metadata["accuracy"] > s2.metadata["accuracy"]
-                )
-        """
-        return self.query.find_by_comparator(comparator)
 
     def get_snapshot_by_index(self, index, deepcopy=DEFAULT):
         """

@@ -70,7 +70,7 @@ manager.save_snapshot(pytree2, snapshot_id="snap2", tags=["experiment", "variant
 manager.save_snapshot(pytree3, snapshot_id="snap3", tags=["control"])
 
 # Find snapshots by tag
-experiment_snapshots = manager.find_snapshots_by_tag("experiment")
+experiment_snapshots = manager.query.by_tag("experiment")
 print("Experiment Snapshots:", experiment_snapshots)
 # Output: Experiment Snapshots: ['snap1', 'snap2']
 

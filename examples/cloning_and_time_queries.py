@@ -29,7 +29,7 @@ start_time = manager.storage.get_snapshot(snapshot_id1).timestamp
 end_time = (
     manager.storage.get_snapshot(snapshot_id2).timestamp + 1
 )  # Extend range slightly
-time_range_snapshots = manager.find_snapshots_by_time_range(start_time, end_time)
+time_range_snapshots = manager.query.find_snapshots_by_time_range(start_time, end_time)
 print("Snapshots created in time range:", time_range_snapshots)
 
 # Retrieve cloned snapshot's PyTree
