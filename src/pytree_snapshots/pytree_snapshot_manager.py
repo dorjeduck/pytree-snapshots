@@ -35,7 +35,6 @@ class PyTreeSnapshotManager(SnapshotManager):
         snapshot_id=None,
         metadata=None,
         tags=None,
-        compress=DEFAULT,
         overwrite=False,
     ):
         """
@@ -46,15 +45,14 @@ class PyTreeSnapshotManager(SnapshotManager):
             snapshot_id (str, optional): A unique identifier for the snapshot. If None, a new UUID is generated.
             metadata (dict, optional): Metadata to associate with the snapshot.
             tags (list, optional): Tags to associate with the snapshot.
-            compress (bool): Whether to compress the snapshot data.
             overwrite (bool): Whether to overwrite an existing snapshot.
 
         Returns:
             str: The ID of the saved snapshot.
         """
         snapshot_id = snapshot_id or str(uuid.uuid4())
-        compress = self.compress if compress is DEFAULT else compress
-        snapshot = PyTreeSnapshot(pytree, metadata, tags, compress)
+    
+        snapshot = PyTreeSnapshot(pytree, metadata, tags)
         self.storage.add_snapshot(snapshot_id, snapshot, overwrite=overwrite)
         return snapshot_id
 

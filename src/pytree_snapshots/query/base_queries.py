@@ -19,16 +19,40 @@ class Query(ABC):
         """
         pass
 
+
 class ByMetadataQuery(Query):
     def __init__(self, key, value):
+        """
+        Initialize a metadata query.
+
+        Args:
+            key (str): The key to search for in the metadata. Supports dot notation for nested keys.
+            value: The value to compare against.
+        """
         self.key = key
         self.value = value
 
     def evaluate(self, snapshot):
         """
         Check if the snapshot's metadata contains the key-value pair.
+
+        Args:
+            snapshot: The snapshot object to evaluate.
+
+        Returns:
+            bool: True if the metadata contains the key-value pair, False otherwise.
         """
-        return snapshot.metadata.get(self.key) == self.value
+        # Handle dot notation for nested metadata
+        keys = self.key.split(".")
+        metadata = snapshot.metadata
+
+        try:
+            for k in keys:
+                metadata = metadata[k]
+            return metadata == self.value
+        except (KeyError, TypeError):
+            return False
+
 
 class ByTagQuery(Query):
     def __init__(self, tag):

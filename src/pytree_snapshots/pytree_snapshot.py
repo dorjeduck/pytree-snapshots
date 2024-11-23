@@ -3,7 +3,7 @@ from pytree_snapshots.snapshot import Snapshot
 
 
 class PyTreeSnapshot(Snapshot):
-    def __init__(self, pytree, metadata=None, tags=None, compress=False):
+    def __init__(self, pytree, metadata=None, tags=None):
         """
         Initialize a PyTree-specific Snapshot.
 
@@ -11,10 +11,9 @@ class PyTreeSnapshot(Snapshot):
             pytree: A valid JAX PyTree.
             metadata (dict, optional): User-defined metadata.
             tags (list, optional): Tags associated with the snapshot.
-            compress (bool, optional): Whether to compress the snapshot data.
         """
         self.validate_pytree(pytree)
-        super().__init__(pytree, metadata, tags, compress)
+        super().__init__(pytree, metadata, tags)
 
     @staticmethod
     def validate_pytree(pytree):

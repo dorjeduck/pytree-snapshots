@@ -17,7 +17,6 @@ class SnapshotManager:
         self,
         deepcopy=True,
         query_class=None,
-        compress=False,
         max_snapshots=None,
         cmp_function=None,
     ):
@@ -27,7 +26,6 @@ class SnapshotManager:
         Args:
             deepcopy (bool): Whether to return deep copies of PyTrees by default. Defaults to True.
             query_class (type, optional): A class implementing SnapshotQueryInterface. Defaults to SnapshotQuery.
-            compress (bool): Whether to compress snapshots by default. Defaults to False.
             max_snapshots (int, optional): Maximum number of snapshots to store. Defaults to None (no limit).
             cmp_function (callable, optional): A comparison function to order snapshots, also used to decide which snapshot to remove
                                             when the storage limit is reached. Defaults to None.
@@ -40,7 +38,6 @@ class SnapshotManager:
         )
         self.query = (query_class or SnapshotQuery)(self.storage.snapshots)
         self.deepcopy = deepcopy
-        self.compress = compress
 
     def __getitem__(self, index, deepcopy=DEFAULT):
         """
@@ -85,7 +82,6 @@ class SnapshotManager:
         snapshot_id=None,
         metadata=None,
         tags=None,
-        compress=DEFAULT,
         overwrite=False,
     ):
         """
@@ -96,15 +92,13 @@ class SnapshotManager:
             snapshot_id (str, optional): Identifier for the Snapshot. A unique ID is generated if not provided.
             metadata (dict, optional): Metadata to associate with the snapshot.
             tags (list, optional): Tags to associate with the snapshot.
-            compress (bool): Whether to compress the snapshot data.
             overwrite (bool): Whether to overwrite an existing snapshot.
 
         Returns:
             str: The ID of the saved snapshot.
         """
         snapshot_id = snapshot_id or str(uuid.uuid4())
-        compress = self.compress if compress is DEFAULT else compress
-        snapshot = Snapshot(pytree, metadata, tags, compress)
+        snapshot = Snapshot(pytree, metadata, tags)
         self.storage.add_snapshot(snapshot_id, snapshot, overwrite=overwrite)
         return snapshot_id
 
@@ -397,7 +391,7 @@ class SnapshotManager:
             else list(reversed(self.storage.snapshot_order))
         )
 
-    def save_state(self, file_path, compress=False):
+    def save_state(self, file_path, compress=True):
         """
         Save the current state of the manager to a file.
 
@@ -417,8 +411,7 @@ class SnapshotManager:
 
         Args:
             file_path (str): Path to the file containing the saved state.
-            decompress (bool): Whether the file is compressed.
-
+           
         Returns:
             SnapshotManager: A new manager instance with the loaded state.
         """

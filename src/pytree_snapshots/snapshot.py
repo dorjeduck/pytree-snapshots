@@ -5,7 +5,7 @@ import copy
 
 
 class Snapshot:
-    def __init__(self, data, metadata=None, tags=None, compress=False):
+    def __init__(self, data, metadata=None, tags=None):
         """
         Initialize a Snapshot instance.
 
@@ -13,15 +13,15 @@ class Snapshot:
             data: The data structure to store in the snapshot.
             metadata (dict, optional): User-defined metadata.
             tags (list, optional): Tags associated with the snapshot.
-            compress (bool, optional): Whether to compress the snapshot data.
+
         """
         self.timestamp = time.time()
         self.metadata = metadata or {}
         self.tags = list(tags or [])
-        self.compress = compress
+        self.compress = False  # disabled as option for now
 
         # Store the data, compressing it if needed
-        self.data = self._compress(data) if compress else data
+        self.data = self._compress(data) if self.compress else data
 
     def to_dict(self):
         """Convert the snapshot to a dictionary for serialization."""
@@ -40,7 +40,6 @@ class Snapshot:
             data=data["data"],
             metadata=data.get("metadata"),
             tags=data.get("tags"),
-            compress=data.get("compress", False),
         )
 
     def _compress(self, data):
@@ -52,9 +51,7 @@ class Snapshot:
     def _decompress(self):
         try:
             return (
-                pickle.loads(zlib.decompress(self.data))
-                if self.compress
-                else self.data
+                pickle.loads(zlib.decompress(self.data)) if self.compress else self.data
             )
         except Exception as e:
             raise RuntimeError("Decompression failed") from e
