@@ -132,6 +132,36 @@ stored_snapshot = manager.get_snapshot(snapshot_id)
 assert stored_snapshot["b"] == [2, 3, 4], "Deepcopy override failed: Original snapshot was not updated."
 ```
 
+## Snapshot Compression
+
+Snapshots can be compressed during saving to reduce memory usage. However, this compression slows down saving and retrieval, making it less suitable for scenarios requiring frequent access.
+
+### Default Compression Setting
+
+Compression is disabled by default. You can enable compression globally during initialization:
+
+```python
+# Enable snapshot compression globally
+manager = SnapshotManager(compress=True)
+```
+
+### Overriding Compression for Individual Snapshots
+
+You can override the global compression setting for specific snapshots by using the compress parameter when calling save_snapshot.
+
+```python
+# Save a snapshot with default compression (inherits global setting)
+snapshot_id_default = manager.save_snapshot({"a": 1})
+
+# Save a snapshot with explicit compression
+snapshot_id_compressed = manager.save_snapshot({"b": 2}, compress=True)
+
+# Save a snapshot without compression
+snapshot_id_uncompressed = manager.save_snapshot({"c": 3}, compress=False)
+```
+
+Compressed snapshots are automatically decompressed when retrieved.
+
 ## Roadmap
 
 - Listening to feedback ...

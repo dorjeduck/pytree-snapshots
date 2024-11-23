@@ -13,7 +13,9 @@ class SnapshotManager:
     A manager for storing and managing PyTree snapshots.
     """
 
-    def __init__(self, max_snapshots=None, deepcopy=True, query_class=None):
+    def __init__(
+        self, max_snapshots=None, deepcopy=True, query_class=None, compress=False
+    ):
         """
         Initialize the SnapshotManager.
 
@@ -21,12 +23,14 @@ class SnapshotManager:
             max_snapshots (int, optional): Maximum number of snapshots to store. Defaults to None (no limit).
             deepcopy (bool): Whether to return deep copies of PyTrees by default. Defaults to True.
             query_class (type, optional): A class implementing SnapshotQueryInterface. Defaults to SnapshotQuery.
+            compress (bool): Whether to compress snapshots by default. Defaults to False.
         """
         if query_class and not issubclass(query_class, SnapshotQueryInterface):
             raise TypeError("query_class must implement SnapshotQueryInterface.")
         self.storage = SnapshotStorage(max_snapshots=max_snapshots)
         self.query = (query_class or SnapshotQuery)(self.storage.snapshots)
         self.deepcopy = deepcopy
+        self.compress = compress
 
     def __getitem__(self, index, deepcopy=DEFAULT):
         """
@@ -71,7 +75,7 @@ class SnapshotManager:
         snapshot_id=None,
         metadata=None,
         tags=None,
-        compress=False,
+        compress=DEFAULT,
         overwrite=False,
     ):
         """
@@ -89,6 +93,7 @@ class SnapshotManager:
             str: The ID of the saved snapshot.
         """
         snapshot_id = snapshot_id or str(uuid.uuid4())
+        compress = self.compress if compress is DEFAULT else compress
         snapshot = Snapshot(pytree, metadata, tags, compress)
         self.storage.add_snapshot(snapshot_id, snapshot, overwrite=overwrite)
         return snapshot_id

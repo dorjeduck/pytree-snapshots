@@ -8,7 +8,7 @@ class SnapshotPersistence:
     """
 
     @staticmethod
-    def save_state(manager, file_path, compress=False):
+    def save_state(manager, file_path, compress=True):
         """
         Save the state of a SnapshotManager to a file.
 
@@ -41,19 +41,18 @@ class SnapshotPersistence:
             file.write(serialized_data)
 
     @staticmethod
-    def load_state(file_path, decompress=False):
+    def load_state(file_path):
         """
         Load the state of a SnapshotManager from a file.
 
         Args:
             file_path (str): Path to the file containing the saved state.
-            decompress (bool): Whether the data is compressed.
 
         Returns:
             dict: The deserialized state.
 
         Raises:
-            ValueError: If decompression or deserialization fails.
+            ValueError: If deserialization fails.
             FileNotFoundError: If the specified file does not exist.
         """
         try:
@@ -61,9 +60,11 @@ class SnapshotPersistence:
             with open(file_path, "rb") as file:
                 serialized_data = file.read()
 
-            # Decompress if necessary
-            if decompress:
+            # Attempt to decompress
+            try:
                 serialized_data = zlib.decompress(serialized_data)
+            except zlib.error:
+                pass  # Data is not compressed, continue with raw serialized data
 
             # Deserialize the state
             state = pickle.loads(serialized_data)
