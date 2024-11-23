@@ -1,5 +1,5 @@
 # Example PyTreeSnapshotManager Usage
-from pytree_snapshots.snapshot_manager import SnapshotManager
+from pytree_snapshots import SnapshotManager
 import jax.numpy as jnp
 
 # Initialize the manager

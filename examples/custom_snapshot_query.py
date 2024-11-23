@@ -1,4 +1,6 @@
-from pytree_snapshots import SnapshotManager, SnapshotQuery
+from pytree_snapshots import SnapshotManager
+from pytree_snapshots.query import SnapshotQuery
+
 
 class LoggingSnapshotQuery(SnapshotQuery):
     """

@@ -44,7 +44,8 @@ print(f"Oldest snapshot: {oldest_snapshot_id}")
 In this example, we’ll create a custom query class that logs certain query operation for debugging purposes.
 
 ```python
-from pytree_snapshots import SnapshotManager, SnapshotQuery
+from pytree_snapshots import SnapshotManager
+from pytree_snapshots.query import SnapshotQuery
 
 class LoggingSnapshotQuery(SnapshotQuery):
     """
