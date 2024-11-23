@@ -4,6 +4,8 @@ PyTree Snapshots provides a flexible and powerful query system to retrieve snaps
 
 ## Querying Snapshots by Time
 
+Every snapshot saved using SnapshotManager is automatically assigned a timestamp. This timestamp is managed internally and represents the time when the snapshot was saved. You can use the ByTimeRangeQuery to filter snapshots based on these timestamps.
+
 ```python 
 import time
 from pytree_snapshots import SnapshotManager
