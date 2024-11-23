@@ -14,20 +14,30 @@ class SnapshotManager:
     """
 
     def __init__(
-        self, max_snapshots=None, deepcopy=True, query_class=None, compress=False
+        self,
+        deepcopy=True,
+        query_class=None,
+        compress=False,
+        max_snapshots=None,
+        cmp_function=None,
     ):
         """
         Initialize the SnapshotManager.
 
         Args:
-            max_snapshots (int, optional): Maximum number of snapshots to store. Defaults to None (no limit).
             deepcopy (bool): Whether to return deep copies of PyTrees by default. Defaults to True.
             query_class (type, optional): A class implementing SnapshotQueryInterface. Defaults to SnapshotQuery.
             compress (bool): Whether to compress snapshots by default. Defaults to False.
+            max_snapshots (int, optional): Maximum number of snapshots to store. Defaults to None (no limit).
+            cmp_function (callable, optional): A comparison function to order snapshots, also used to decide which snapshot to remove
+                                            when the storage limit is reached. Defaults to None.
         """
         if query_class and not issubclass(query_class, SnapshotQueryInterface):
             raise TypeError("query_class must implement SnapshotQueryInterface.")
-        self.storage = SnapshotStorage(max_snapshots=max_snapshots)
+
+        self.storage = SnapshotStorage(
+            max_snapshots=max_snapshots, cmp_function=cmp_function
+        )
         self.query = (query_class or SnapshotQuery)(self.storage.snapshots)
         self.deepcopy = deepcopy
         self.compress = compress
@@ -129,9 +139,24 @@ class SnapshotManager:
             IndexError: If no snapshots are available.
         """
         # Use storage to get the latest snapshot
-        snapshot_id = self.storage.get_latest_snapshot_id()
+        snapshot_id = self.storage.snapshot_order[0]
         snapshot = self.storage.get_snapshot(snapshot_id)
         return snapshot.get_data(self._should_deepcopy(deepcopy))
+
+    def get_ranked_snapshots(self):
+        """
+        Retrieve the list of snapshot IDs ordered by the comparison function if defined,
+        otherwise by their age (insertion order).
+
+        Returns:
+            list: Ordered list of snapshot IDs.
+
+        Examples:
+            Get snapshots ranked by a custom comparison:
+                ranked_snapshots = manager.get_ranked_snapshots()
+        """
+
+        return self.storage.get_ranked_snapshots()
 
     def remove_snapshot(self, snapshot_id):
         """

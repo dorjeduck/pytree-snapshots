@@ -311,3 +311,47 @@ def test_query_by_leaf_value_complex_condition():
     assert "snap3" in results, "Snapshot with negative leaf values is missing."
     assert "snap2" in results, "Snapshot with negative leaf values is missing."
     assert "snap1" not in results, "Snapshot with no negative leaf values is incorrectly included."
+
+def test_prune_snapshots_by_accuracy():
+    """Test pruning snapshots by accuracy when max_snapshots is reached."""
+    def cmp_by_accuracy(snapshot1, snapshot2):
+        return snapshot1.metadata.get("accuracy", 0) - snapshot2.metadata.get("accuracy", 0)
+
+    # Initialize manager with a maximum of 3 snapshots
+    manager = SnapshotManager(max_snapshots=3, cmp_function=cmp_by_accuracy)
+
+    # Save snapshots with varying accuracy
+    manager.save_snapshot({"a": 1}, snapshot_id="snap1", metadata={"accuracy": 0.5})
+    manager.save_snapshot({"b": 2}, snapshot_id="snap2", metadata={"accuracy": 0.7})
+    manager.save_snapshot({"c": 3}, snapshot_id="snap3", metadata={"accuracy": 0.6})
+
+    # Save a new snapshot with higher accuracy
+    manager.save_snapshot({"d": 4}, snapshot_id="snap4", metadata={"accuracy": 0.8})
+
+    # Verify that only the top 3 snapshots are retained
+    snapshots = manager.get_ranked_snapshots()
+    assert len(snapshots) == 3, "Number of retained snapshots does not match max_snapshots."
+    assert "snap1" not in snapshots, "Lowest accuracy snapshot was not removed."
+    assert snapshots == ["snap4", "snap2", "snap3"], "Snapshots are not ordered by accuracy."
+
+def test_reject_low_ranked_snapshot():
+    """Test rejecting a low-ranked snapshot when max_snapshots is reached."""
+    def cmp_by_accuracy(snapshot1, snapshot2):
+        return snapshot1.metadata.get("accuracy", 0) - snapshot2.metadata.get("accuracy", 0)
+
+    # Initialize manager with a maximum of 3 snapshots
+    manager = SnapshotManager(max_snapshots=3, cmp_function=cmp_by_accuracy)
+
+    # Save snapshots with varying accuracy
+    manager.save_snapshot({"a": 1}, snapshot_id="snap1", metadata={"accuracy": 0.5})
+    manager.save_snapshot({"b": 2}, snapshot_id="snap2", metadata={"accuracy": 0.7})
+    manager.save_snapshot({"c": 3}, snapshot_id="snap3", metadata={"accuracy": 0.6})
+
+    # Attempt to save a new snapshot with lower accuracy than the current lowest
+    manager.save_snapshot({"e": 5}, snapshot_id="snap5", metadata={"accuracy": 0.4})
+
+    # Verify that the low-ranked snapshot was not added
+    snapshots = manager.get_ranked_snapshots()
+    assert len(snapshots) == 3, "Number of snapshots exceeds max_snapshots."
+    assert "snap5" not in snapshots, "Low-ranked snapshot was incorrectly added."
+    assert snapshots == ["snap2", "snap3", "snap1"], "Snapshots are not ordered correctly after rejection."

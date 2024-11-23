@@ -114,7 +114,7 @@ For advanced query examples, including custom criteria and logical queries, chec
 
 ### Further Examples
 
-Explore the [`examples` folder](./examples) for a random collection of demos showcasing various features and use cases.
+Explore the [examples](./examples) folder for a random collection of demos showcasing various features and use cases.
 
 ## Deepcopy Logic in SnapshotManager
 
