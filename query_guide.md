@@ -1,4 +1,4 @@
-# Query Quide
+# Query Guide
 
 PyTree Snapshots provides a flexible and powerful query system to retrieve snapshots based on various criteria such as metadata, tags, content, and more. This guide demonstrates how to use the query system effectively, from simple queries to complex, nested logical operations.
 
