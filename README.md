@@ -94,7 +94,7 @@ The `SnapshotManager` uses the `deepcopy` parameter to control whether snapshots
 
 ### What is Deepcopy?
 
-A **deep copy** creates a new copy of the entire data structure. Modifications to the copy will not affect the original, ensuring data safety. This is particularly useful for immutable snapshots or when you want to avoid unintended side effects.
+A **deep copy** creates a new copy of the entire data structure. Modifications to the copy will not affect the original, ensuring data safety. This is particularly useful for immutable snapshots or when you want to avoid unintended side effects. However, deep copies come at the cost of performance, as creating them can be computationally expensive for large PyTrees.
 
 In contrast, a **shallow copy** or direct reference means changes to the retrieved PyTree will also modify the stored snapshot.
 
@@ -134,7 +134,7 @@ assert stored_snapshot["b"] == [2, 3, 4], "Deepcopy override failed: Original sn
 
 ## Snapshot Compression
 
-Snapshots can be compressed during saving to reduce memory usage. However, this compression slows down saving and retrieval, making it less suitable for scenarios requiring frequent access.
+Snapshots can be compressed during saving to reduce memory usage. However, this compression slows down saving, retrieval and content-based queries, making it less suitable for scenarios requiring frequent access.
 
 ### Default Compression Setting
 
