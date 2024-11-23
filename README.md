@@ -88,6 +88,50 @@ For advanced query examples, including custom criteria and logical queries, chec
 
 Explore the [`examples` folder](./examples) for a random collection of demos showcasing various features and use cases.
 
+## Deepcopy Logic in SnapshotManager
+
+The `SnapshotManager` uses the `deepcopy` parameter to control whether snapshots are returned as deep copies or as references to the original PyTree.
+
+### What is Deepcopy?
+
+A **deep copy** creates a new copy of the entire data structure. Modifications to the copy will not affect the original, ensuring data safety. This is particularly useful for immutable snapshots or when you want to avoid unintended side effects.
+
+In contrast, a **shallow copy** or direct reference means changes to the retrieved PyTree will also modify the stored snapshot.
+
+### Default Behavior
+
+By default, snapshots are returned as deep copies, ensuring that modifications to the retrieved PyTree do not affect the stored snapshot.
+
+You can override this behavior globally when initializing the SnapshotManager. 
+
+```python
+manager = SnapshotManager(deepcopy=False)
+```
+
+### Overriding Deepcopy Per Retrieval
+
+The SnapshotManager allows you to override the initial deepcopy setting for individual snapshot retrievals. This is useful when you want a specific snapshot retrieval to behave differently from the default setting.
+
+```python
+from pytree_snapshots import SnapshotManager
+
+# Initialize the manager
+manager = SnapshotManager(deepcopy=True)  # Default behavior is deepcopy enabled
+
+# Save a snapshot
+snapshot_id = manager.save_snapshot({"a": 1, "b": [2, 3]})
+
+# Retrieve a snapshot without deepcopy (shallow reference)
+retrieved_reference = manager.get_snapshot(snapshot_id, deepcopy=False)
+
+# Modify the retrieved snapshot
+retrieved_reference["b"].append(4)
+
+# Since deepcopy was disabled for this retrieval, the original snapshot is also modified
+stored_snapshot = manager.get_snapshot(snapshot_id)
+assert stored_snapshot["b"] == [2, 3, 4], "Deepcopy override failed: Original snapshot was not updated."
+```
+
 ## Roadmap
 
 - Listening to feedback ...
