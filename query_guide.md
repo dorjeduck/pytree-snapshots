@@ -2,6 +2,35 @@
 
 PyTree Snapshots provides a flexible and powerful query system to retrieve snapshots based on various criteria such as metadata, tags, content, and more. This guide demonstrates how to use the query system effectively, from simple queries to complex, nested logical operations.
 
+## Querying Snapshots by Time
+
+```python 
+import time
+from pytree_snapshots import SnapshotManager
+from pytree_snapshots.query import ByTimeRangeQuery
+
+# Initialize the manager
+manager = SnapshotManager()
+
+# Save snapshots (timestamps are assigned automatically)
+manager.save_snapshot({"a": 1}, snapshot_id="snap1")  # Snapshot saved at time T1
+time.sleep(1)  # Simulate delay
+manager.save_snapshot({"b": 2}, snapshot_id="snap2")  # Snapshot saved at time T2
+time.sleep(1)  # Simulate delay
+manager.save_snapshot({"c": 3}, snapshot_id="snap3")  # Snapshot saved at time T3
+
+# Define a time range (e.g., last 2 seconds)
+start_time = time.time() - 2  # 2 seconds ago
+end_time = time.time()  # Current time
+
+# Query snapshots saved in the time range
+query = ByTimeRangeQuery(start_time, end_time)
+results = manager.query.evaluate(query)
+
+print("Snapshots saved in the last 2 seconds:", results)
+# Output: ['snap3']
+```
+
 ## Custom Criteria for Selecting Snapshots
 
 This example shows how to identify a single snapshot that meets specific user-defined criteria using the `get_snapshot_by_comparator` method. You can use this feature to search for snapshots based on metadata, tags, or other properties, such as finding the snapshot with the highest accuracy, the most associated tags, or the earliest creation time.
