@@ -63,7 +63,7 @@ from pytree_snapshots import PyTreeSnapshotManager
 manager = PyTreeSnapshotManager()
 
 # Save a PyTree
-pytree = {"a": 1, "b": [2, 3]}
+pytree = {"a": 2, "b": [2, 3]}
 snapshot_id = manager.save_snapshot(pytree, metadata={"experiment": "baseline"})
 
 # Apply a transformation to the PyTree
@@ -72,7 +72,7 @@ def square_leaf(x):
 
 transformed_pytree = manager.apply_leaf_transformation(snapshot_id, square_leaf)
 print("Transformed PyTree:", transformed_pytree)
-# Output: {'a': 1, 'b': [4, 9]}
+# Output: {'a': 4, 'b': [4, 9]}
 ```
 
 ### Managing Snapshots with Tags
