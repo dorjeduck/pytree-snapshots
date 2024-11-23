@@ -72,15 +72,6 @@ class Snapshot:
         pytree = self._decompress() if self.compress else self.pytree
         return copy.deepcopy(pytree) if deepcopy else pytree
 
-    def update_metadata(self, new_metadata):
-        """
-        Update the metadata of the snapshot.
-
-        Args:
-            new_metadata (dict): Metadata to update.
-        """
-        self.metadata.update(new_metadata)
-
     def add_tags(self, tags):
         """
         Add tags to the snapshot.
@@ -121,3 +112,48 @@ class Snapshot:
             bool: True if the tag exists, False otherwise.
         """
         return tag in self.tags
+
+    def get_metadata(self):
+        """
+        Retrieve the metadata associated with the snapshot.
+
+        Returns:
+            dict: The metadata dictionary.
+        """
+        return self.metadata
+
+    def set_metadata(self, metadata):
+        """
+        Set or replace the metadata for the snapshot.
+
+        Args:
+            metadata (dict): The new metadata.
+        """
+        self.metadata = metadata
+
+    def get_timestamp(self):
+        """
+        Retrieve the timestamp of when the snapshot was created.
+
+        Returns:
+            float: The timestamp.
+        """
+        return self.timestamp
+
+    def set_timestamp(self, timestamp):
+        """
+        Set or update the timestamp for the snapshot.
+
+        Args:
+            timestamp (float): The new timestamp value.
+        """
+        self.timestamp = timestamp
+
+    def update_metadata(self, new_metadata):
+        """
+        Update the metadata of the snapshot.
+
+        Args:
+            new_metadata (dict): Metadata to update.
+        """
+        self.metadata.update(new_metadata)
