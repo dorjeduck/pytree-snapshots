@@ -1,6 +1,15 @@
 import pytest
 import jax.numpy as jnp
+
 from pytree_snapshots.snapshot_manager import SnapshotManager
+from pytree_snapshots.query import (
+    AndQuery,
+    OrQuery,
+    NotQuery,
+    ByMetadataQuery,
+    ByTagQuery,
+    ByContentQuery,
+)
 
 
 @pytest.fixture
@@ -131,3 +140,136 @@ def test_save_and_load_state(tmp_path, setup_manager):
     assert jnp.array_equal(
         loaded_manager.get_snapshot(snapshot_id2)["b"], pytree2["b"]
     ), "The second snapshot's PyTree content does not match."
+
+
+def test_logical_queries(setup_manager):
+    """Test logical queries using AndQuery, OrQuery, and NotQuery."""
+    manager = setup_manager
+
+    # Save snapshots
+    manager.save_snapshot(
+        {"a": 1},
+        snapshot_id="snap1",
+        metadata={"project": "example1"},
+        tags=["experiment"],
+    )
+    manager.save_snapshot(
+        {"b": 2},
+        snapshot_id="snap2",
+        metadata={"project": "example2"},
+        tags=["control"],
+    )
+    manager.save_snapshot(
+        {"c": 3},
+        snapshot_id="snap3",
+        metadata={"project": "example1"},
+        tags=["experiment", "published"],
+    )
+
+    # Logical Query: Find snapshots in project "example1" AND tagged with "experiment"
+    query = AndQuery(ByMetadataQuery("project", "example1"), ByTagQuery("experiment"))
+    results = manager.query.evaluate(query)
+    assert "snap1" in results and "snap3" in results, "Logical AND query failed."
+
+    # Logical Query: Find snapshots in project "example1" OR tagged with "control"
+    query = OrQuery(ByMetadataQuery("project", "example1"), ByTagQuery("control"))
+    results = manager.query.evaluate(query)
+    assert (
+        "snap1" in results and "snap2" in results and "snap3" in results
+    ), "Logical OR query failed."
+
+    # Logical Query: Find snapshots NOT tagged with "control"
+    query = NotQuery(ByTagQuery("control"))
+    results = manager.query.evaluate(query)
+    assert (
+        "snap1" in results and "snap3" in results and "snap2" not in results
+    ), "Logical NOT query failed."
+
+
+from pytree_snapshots.query import ByContentQuery
+
+
+def test_by_content_query(setup_manager):
+    """Test querying snapshots based on their content."""
+    manager = setup_manager
+
+    # Save snapshots with complex content
+    manager.save_snapshot({"key": 1, "nested": {"a": 2}}, snapshot_id="snap1")
+    manager.save_snapshot({"key": 3}, snapshot_id="snap2")
+    manager.save_snapshot({"nested": {"b": 4}}, snapshot_id="snap3")
+
+    # Query for snapshots containing a specific key
+    query = ByContentQuery(lambda content: "key" in content)
+    results = manager.query.evaluate(query)
+    assert (
+        "snap1" in results and "snap2" in results and "snap3" not in results
+    ), "ByContentQuery failed for key existence."
+
+    # Query for snapshots with nested key "a"
+    query = ByContentQuery(
+        lambda content: "nested" in content and "a" in content["nested"]
+    )
+    results = manager.query.evaluate(query)
+    assert (
+        "snap1" in results and "snap2" not in results and "snap3" not in results
+    ), "ByContentQuery failed for nested key."
+
+
+def test_remove_snapshot(setup_manager):
+    """Test removing a snapshot."""
+    manager = setup_manager
+
+    # Save snapshots
+    snapshot_id1 = manager.save_snapshot({"a": 1})
+    snapshot_id2 = manager.save_snapshot({"b": 2})
+
+    # Remove the first snapshot
+    manager.remove_snapshot(snapshot_id1)
+
+    # Verify the snapshot is removed
+    with pytest.raises(ValueError, match="Snapshot ID .* does not exist"):
+        manager.get_snapshot(snapshot_id1)
+
+    # Verify the remaining snapshot is unaffected
+    retrieved = manager.get_snapshot(snapshot_id2)
+    assert retrieved["b"] == 2, "Remaining snapshot was affected by removal."
+
+
+def test_duplicate_snapshots(setup_manager):
+    """Test saving duplicate snapshots."""
+    manager = setup_manager
+
+    # Save identical snapshots
+    snapshot_id1 = manager.save_snapshot({"a": 1})
+    snapshot_id2 = manager.save_snapshot({"a": 1})
+
+    # Verify that the snapshots have distinct IDs
+    assert snapshot_id1 != snapshot_id2, "Duplicate snapshots have the same ID."
+
+    # Verify that both snapshots are accessible
+    retrieved1 = manager.get_snapshot(snapshot_id1)
+    retrieved2 = manager.get_snapshot(snapshot_id2)
+    assert (
+        retrieved1 == retrieved2
+    ), "Duplicate snapshots should have identical content."
+
+
+def test_snapshot_order_after_state_restore(tmp_path, setup_manager):
+    """Test that snapshot order is preserved after restoring state."""
+    manager = setup_manager
+
+    # Save snapshots
+    manager.save_snapshot({"a": 1}, snapshot_id="snap1")
+    manager.save_snapshot({"b": 2}, snapshot_id="snap2")
+
+    # Save the manager state
+    state_file = tmp_path / "state.pkl"
+    manager.save_state(state_file)
+
+    # Restore the state
+    restored_manager = SnapshotManager.load_state(state_file)
+
+    # Verify that the snapshot order is preserved
+    assert (
+        restored_manager.storage.snapshot_order == manager.storage.snapshot_order
+    ), "Snapshot order was not preserved after restoring state."

@@ -3,8 +3,7 @@ import uuid
 from .snapshot import Snapshot
 from .snapshot_storage import SnapshotStorage
 from .snapshot_persistence import SnapshotPersistence
-from .query.snapshot_query_interface import SnapshotQueryInterface
-from .query.snapshot_query import SnapshotQuery
+from .query import SnapshotQueryInterface, SnapshotQuery
 
 DEFAULT = object()
 
@@ -129,7 +128,7 @@ class SnapshotManager:
         snapshot = self.storage.get_snapshot(snapshot_id)
         return snapshot.get_pytree(self._should_deepcopy(deepcopy))
 
-    def delete_snapshot(self, snapshot_id):
+    def remove_snapshot(self, snapshot_id):
         """
         Delete a snapshot by its ID.
 

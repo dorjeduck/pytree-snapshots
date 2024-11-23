@@ -109,8 +109,7 @@ This example demonstrates how to combine logical operations (AND, OR, NOT) to cr
 
 ```python
 from pytree_snapshots import SnapshotManager
-from pytree_snapshots.query.logical_queries import AndQuery, OrQuery, NotQuery
-from pytree_snapshots.query.query_base import ByMetadataQuery, ByTagQuery
+from pytree_snapshots.query import AndQuery, OrQuery, NotQuery ByMetadataQuery, ByTagQuery
 
 # Initialize the manager
 manager = SnapshotManager()

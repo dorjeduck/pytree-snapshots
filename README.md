@@ -80,14 +80,13 @@ print("Snapshot snap1:", snapshot)
 # Output: Snapshot snap1: {'a': 1, 'b': 2}
 ```
 
-Advanced Querying
+### Advanced Querying
 
 For advanced query examples, including custom criteria and logical queries, check out the [Query Guide](./query_guide.md) page.
 
+### Further Examples
 
-
-
-Explore the [`examples` folder](./examples) for additional demos showcasing various features and use cases.
+Explore the [`examples` folder](./examples) for a random collection of demos showcasing various features and use cases.
 
 ## Roadmap
 
