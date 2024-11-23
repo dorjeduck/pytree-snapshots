@@ -1,7 +1,7 @@
-from pytree_snapshots import PytreeSnapshotManager
+from pytree_snapshots import SnapshotManager
 
 # Initialize the manager
-manager = PytreeSnapshotManager()
+manager = SnapshotManager()
 
 # Save a snapshot
 pytree = {"a": 1, "b": 2}

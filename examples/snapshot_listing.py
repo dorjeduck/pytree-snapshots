@@ -1,9 +1,9 @@
 # Save multiple snapshots
 import os
-from pytree_snapshots import PytreeSnapshotManager
+from pytree_snapshots import SnapshotManager
 
 # Create a manager and save a snapshot
-manager = PytreeSnapshotManager()
+manager = SnapshotManager()
 
 manager.save_snapshot({"a": 1}, snapshot_id="snap1")
 manager.save_snapshot({"b": 2}, snapshot_id="snap2")

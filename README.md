@@ -34,10 +34,10 @@ pip install .
 Basic example demonstrating how to save and retrieve snapshots of PyTrees.
 
 ```python
-from pytree_snapshots import PytreeSnapshotManager
+from pytree_snapshots import SnapshotManager
 
 # Initialize the manager
-manager = PytreeSnapshotManager()
+manager = SnapshotManager()
 
 # Save a snapshot
 pytree = {"a": 1, "b": 2}
@@ -54,10 +54,10 @@ print("Retrieved snapshot:", retrieved)
 This example shows how to organize snapshots using tags, search for snapshots by tags, and retrieve specific snapshots for inspection.
 
 ```python
-from pytree_snapshots import PytreeSnapshotManager
+from pytree_snapshots import SnapshotManager
 
 # Initialize the manager
-manager = PytreeSnapshotManager()
+manager = SnapshotManager()
 
 # Create PyTrees
 pytree1 = {"a": 1, "b": 2}
@@ -85,10 +85,10 @@ print("Snapshot snap1:", snapshot)
 This example shows how to identify a single snapshot that meets specific user-defined criteria using the `get_snapshot_by_comparator` method. You can use this feature to search for snapshots based on metadata, tags, or other properties, such as finding the snapshot with the highest accuracy, the most associated tags, or the earliest creation time.
 
 ```python
-from pytree_snapshots import PytreeSnapshotManager
+from pytree_snapshots import SnapshotManager
 
 # Initialize the manager
-manager = PytreeSnapshotManager()
+manager = SnapshotManager()
 
 # Save snapshots with metadata and tags
 manager.save_snapshot({}, snapshot_id="snap1", metadata={"accuracy": 0.85, "created_at": 1690000000.0}, tags=["experiment", "draft"])
@@ -130,6 +130,8 @@ We warmly welcome contributions and look forward to your pull requests!
 
 ## Changelog
 
+- 2024.11.23
+  - Refactored
 - 2024.11.20
   - PyTree comparison removed - for now.
 - 2024.11.18

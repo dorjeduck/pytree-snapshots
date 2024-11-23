@@ -1,6 +1,6 @@
-from pytree_snapshots import PytreeSnapshotManager
+from pytree_snapshots import SnapshotManager
 
-manager = PytreeSnapshotManager()
+manager = SnapshotManager()
 
 # Save a snapshot with metadata
 manager.save_snapshot({"a": 1}, snapshot_id="snap1", metadata={"experiment": "trial1"})

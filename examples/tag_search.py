@@ -1,6 +1,6 @@
-from pytree_snapshots import PytreeSnapshotManager
+from pytree_snapshots import SnapshotManager
 
-manager = PytreeSnapshotManager()
+manager = SnapshotManager()
 
 # Save snapshots with tags
 manager.save_snapshot({"a": 1}, snapshot_id="baseline", tags=["experiment", "baseline"])

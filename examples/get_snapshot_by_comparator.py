@@ -1,12 +1,26 @@
-
-from pytree_snapshots import PytreeSnapshotManager
+from pytree_snapshots import SnapshotManager
 
 # Initialize the manager
-manager = PytreeSnapshotManager()
+manager = SnapshotManager()
 
-manager.save_snapshot({}, snapshot_id="snap1", metadata={"accuracy": 0.85,"created_at": 1690000000.0},tags=["experiment", "draft"])
-manager.save_snapshot({}, snapshot_id="snap2", metadata={"accuracy": 0.90,"created_at": 1695000000.0},tags=["draft"])
-manager.save_snapshot({}, snapshot_id="snap3", metadata={"accuracy": 0.88,"created_at": 1790000000.0},tags=["final", "experiment", "published"])
+manager.save_snapshot(
+    {},
+    snapshot_id="snap1",
+    metadata={"accuracy": 0.85, "created_at": 1690000000.0},
+    tags=["experiment", "draft"],
+)
+manager.save_snapshot(
+    {},
+    snapshot_id="snap2",
+    metadata={"accuracy": 0.90, "created_at": 1695000000.0},
+    tags=["draft"],
+)
+manager.save_snapshot(
+    {},
+    snapshot_id="snap3",
+    metadata={"accuracy": 0.88, "created_at": 1790000000.0},
+    tags=["final", "experiment", "published"],
+)
 
 snapshot_with_highest_accuracy = manager.get_snapshot_by_comparator(
     lambda s1, s2: s1.metadata["accuracy"] >= s2.metadata["accuracy"]

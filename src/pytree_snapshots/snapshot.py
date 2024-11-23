@@ -1,12 +1,13 @@
 import time
 import pickle
 import zlib
-import copy 
+import copy
 
-class PytreeSnapshot:
+
+class Snapshot:
     def __init__(self, pytree, metadata=None, tags=None, compress=False):
         """
-        Initialize a PytreeSnapshot instance.
+        Initialize a Snapshot instance.
 
         Args:
             pytree: The data structure to store in the snapshot.
@@ -50,10 +51,14 @@ class PytreeSnapshot:
 
     def _decompress(self):
         try:
-            return pickle.loads(zlib.decompress(self.pytree)) if self.compress else self.pytree
+            return (
+                pickle.loads(zlib.decompress(self.pytree))
+                if self.compress
+                else self.pytree
+            )
         except Exception as e:
             raise RuntimeError("Decompression failed") from e
-    
+
     def get_pytree(self, deepcopy=True):
         """
         Retrieve the pytree, decompressing if needed.

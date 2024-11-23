@@ -1,2 +1,4 @@
-from .pytree_snapshot_manager import PytreeSnapshotManager
-from .pytree_snapshot import PytreeSnapshot
+from .snapshot_manager import SnapshotManager
+from .snapshot import Snapshot
+
+__all__ = ["SnapshotManager", "Snapshot"]

@@ -1,7 +1,7 @@
-from pytree_snapshots import PytreeSnapshotManager
+from pytree_snapshots import SnapshotManager
 
 # Initialize the manager with a maximum of 3 snapshots
-manager = PytreeSnapshotManager(max_snapshots=3)
+manager = SnapshotManager(max_snapshots=3)
 
 # Add multiple snapshots
 for i in range(5):

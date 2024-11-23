@@ -1,9 +1,9 @@
-import os 
-from pytree_snapshots import PytreeSnapshotManager
+import os
+from pytree_snapshots import SnapshotManager
 
 
 # Create a manager and save a snapshot
-manager = PytreeSnapshotManager()
+manager = SnapshotManager()
 pytree = {"a": 1, "b": 2}
 manager.save_snapshot(pytree, snapshot_id="example_snapshot")
 
@@ -13,7 +13,7 @@ manager.save_state(state_file)
 print(f"Manager state saved to '{state_file}'.")
 
 # Load the state into a new manager
-new_manager = PytreeSnapshotManager.load_state(state_file)
+new_manager = SnapshotManager.load_state(state_file)
 print("Manager state loaded into a new manager instance.")
 
 # Check if snapshots were loaded correctly
