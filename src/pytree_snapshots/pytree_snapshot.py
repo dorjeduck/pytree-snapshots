@@ -1,4 +1,4 @@
-from jax.tree_util import tree_flatten, tree_map
+import jax
 from pytree_snapshots.snapshot import Snapshot
 
 
@@ -22,19 +22,15 @@ class PyTreeSnapshot(Snapshot):
         Raises a ValueError if not valid.
         """
         try:
-            tree_flatten(pytree)
+            jax.tree.flatten(pytree)
         except Exception as e:
             raise ValueError(f"Invalid PyTree: {e}")
 
-    def apply_leaf_transformation(self, func):
+    def update_leaf_nodes(self, func):
         """
         Apply a transformation function to each leaf of the PyTree.
 
         Args:
             func (callable): A function to apply to each leaf of the PyTree.
-
-        Returns:
-            A new PyTree with the transformation applied.
         """
-        pytree = self.get_data(deepcopy=False)
-        return tree_map(func, pytree)
+        self.data = jax.tree.map(func, self.data)

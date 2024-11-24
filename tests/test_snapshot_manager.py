@@ -11,10 +11,12 @@ from pytree_snapshots.query import (
     ByContentQuery,
 )
 
+
 @pytest.fixture
 def setup_manager():
     """Fixture to set up a SnapshotManager instance."""
     return SnapshotManager(max_snapshots=5)
+
 
 
 def test_save_and_retrieve_snapshot(setup_manager):
@@ -273,16 +275,22 @@ def test_snapshot_order_after_state_restore(tmp_path, setup_manager):
         restored_manager.storage.snapshot_order == manager.storage.snapshot_order
     ), "Snapshot order was not preserved after restoring state."
 
+
 from pytree_snapshots.pytree_snapshot_manager import PyTreeSnapshotManager
 import jax.numpy as jnp
+
 
 def test_query_by_leaf_value_simple_condition():
     """Test querying snapshots with a simple condition on leaf values."""
     manager = PyTreeSnapshotManager()
 
     # Save PyTree snapshots
-    manager.save_snapshot({"a": jnp.array([1, 2, 3]), "b": {"x": jnp.array([4, 5])}}, snapshot_id="snap1")
-    manager.save_snapshot({"x": jnp.array([6, 7, 8]), "y": {"z": jnp.array([9])}}, snapshot_id="snap2")
+    manager.save_snapshot(
+        {"a": jnp.array([1, 2, 3]), "b": {"x": jnp.array([4, 5])}}, snapshot_id="snap1"
+    )
+    manager.save_snapshot(
+        {"x": jnp.array([6, 7, 8]), "y": {"z": jnp.array([9])}}, snapshot_id="snap2"
+    )
     manager.save_snapshot({"p": jnp.array([-1, -2])}, snapshot_id="snap3")
 
     # Query for snapshots where any leaf contains a value > 5
@@ -291,16 +299,25 @@ def test_query_by_leaf_value_simple_condition():
 
     # Assert that only the relevant snapshots are returned
     assert "snap2" in results, "Snapshot with leaf value > 5 is missing."
-    assert "snap1" not in results, "Snapshot with no leaf value > 5 is incorrectly included."
-    assert "snap3" not in results, "Snapshot with no leaf value > 5 is incorrectly included."
+    assert (
+        "snap1" not in results
+    ), "Snapshot with no leaf value > 5 is incorrectly included."
+    assert (
+        "snap3" not in results
+    ), "Snapshot with no leaf value > 5 is incorrectly included."
+
 
 def test_query_by_leaf_value_complex_condition():
     """Test querying snapshots with a complex condition on leaf values."""
     manager = PyTreeSnapshotManager()
 
     # Save PyTree snapshots
-    manager.save_snapshot({"a": jnp.array([1, 2, 3]), "b": {"x": jnp.array([4, 5])}}, snapshot_id="snap1")
-    manager.save_snapshot({"x": jnp.array([-6, 7, 8]), "y": {"z": jnp.array([9])}}, snapshot_id="snap2")
+    manager.save_snapshot(
+        {"a": jnp.array([1, 2, 3]), "b": {"x": jnp.array([4, 5])}}, snapshot_id="snap1"
+    )
+    manager.save_snapshot(
+        {"x": jnp.array([-6, 7, 8]), "y": {"z": jnp.array([9])}}, snapshot_id="snap2"
+    )
     manager.save_snapshot({"p": jnp.array([-1, -2])}, snapshot_id="snap3")
 
     # Query for snapshots where any leaf contains a negative value
@@ -310,12 +327,18 @@ def test_query_by_leaf_value_complex_condition():
     # Assert that the relevant snapshots are returned
     assert "snap3" in results, "Snapshot with negative leaf values is missing."
     assert "snap2" in results, "Snapshot with negative leaf values is missing."
-    assert "snap1" not in results, "Snapshot with no negative leaf values is incorrectly included."
+    assert (
+        "snap1" not in results
+    ), "Snapshot with no negative leaf values is incorrectly included."
+
 
 def test_prune_snapshots_by_accuracy():
     """Test pruning snapshots by accuracy when max_snapshots is reached."""
+
     def cmp_by_accuracy(snapshot1, snapshot2):
-        return snapshot1.metadata.get("accuracy", 0) - snapshot2.metadata.get("accuracy", 0)
+        return snapshot1.metadata.get("accuracy", 0) - snapshot2.metadata.get(
+            "accuracy", 0
+        )
 
     # Initialize manager with a maximum of 3 snapshots
     manager = SnapshotManager(max_snapshots=3, cmp_function=cmp_by_accuracy)
@@ -330,14 +353,24 @@ def test_prune_snapshots_by_accuracy():
 
     # Verify that only the top 3 snapshots are retained
     snapshots = manager.get_ranked_snapshots()
-    assert len(snapshots) == 3, "Number of retained snapshots does not match max_snapshots."
+    assert (
+        len(snapshots) == 3
+    ), "Number of retained snapshots does not match max_snapshots."
     assert "snap1" not in snapshots, "Lowest accuracy snapshot was not removed."
-    assert snapshots == ["snap4", "snap2", "snap3"], "Snapshots are not ordered by accuracy."
+    assert snapshots == [
+        "snap4",
+        "snap2",
+        "snap3",
+    ], "Snapshots are not ordered by accuracy."
+
 
 def test_reject_low_ranked_snapshot():
     """Test rejecting a low-ranked snapshot when max_snapshots is reached."""
+
     def cmp_by_accuracy(snapshot1, snapshot2):
-        return snapshot1.metadata.get("accuracy", 0) - snapshot2.metadata.get("accuracy", 0)
+        return snapshot1.metadata.get("accuracy", 0) - snapshot2.metadata.get(
+            "accuracy", 0
+        )
 
     # Initialize manager with a maximum of 3 snapshots
     manager = SnapshotManager(max_snapshots=3, cmp_function=cmp_by_accuracy)
@@ -354,7 +387,12 @@ def test_reject_low_ranked_snapshot():
     snapshots = manager.get_ranked_snapshots()
     assert len(snapshots) == 3, "Number of snapshots exceeds max_snapshots."
     assert "snap5" not in snapshots, "Low-ranked snapshot was incorrectly added."
-    assert snapshots == ["snap2", "snap3", "snap1"], "Snapshots are not ordered correctly after rejection."
+    assert snapshots == [
+        "snap2",
+        "snap3",
+        "snap1",
+    ], "Snapshots are not ordered correctly after rejection."
+
 
 def test_override_deepcopy_on_retrieve():
     """Test overriding deepcopy_on_retrieve during a retrieval operation."""
@@ -374,8 +412,19 @@ def test_override_deepcopy_on_retrieve():
     original = manager.get_snapshot(snapshot_id)
 
     # Assert the original and retrieved are not isolated
-    assert original["a"] == [1, 2, 3, 4], "Deepcopy override on retrieve did not work correctly."
-    assert retrieved["a"] == [1, 2, 3, 4], "Modified retrieved PyTree was not as expected."
+    assert original["a"] == [
+        1,
+        2,
+        3,
+        4,
+    ], "Deepcopy override on retrieve did not work correctly."
+    assert retrieved["a"] == [
+        1,
+        2,
+        3,
+        4,
+    ], "Modified retrieved PyTree was not as expected."
+
 
 def test_default_deepcopy_logic():
     """Test the default deepcopy settings for saving and retrieving snapshots."""
@@ -392,8 +441,13 @@ def test_default_deepcopy_logic():
     retrieved = manager.get_snapshot(snapshot_id)
 
     # Assert the original and retrieved are isolated
-    assert retrieved["a"] == [1, 2, 3], "Deepcopy on save failed to isolate the snapshot."
+    assert retrieved["a"] == [
+        1,
+        2,
+        3,
+    ], "Deepcopy on save failed to isolate the snapshot."
     assert pytree["a"] == [1, 2, 3, 4], "Original PyTree was unexpectedly modified."
+
 
 def test_override_deepcopy_on_save():
     """Test overriding deepcopy_on_save during a save operation."""
@@ -410,4 +464,53 @@ def test_override_deepcopy_on_save():
     retrieved = manager.get_snapshot(snapshot_id)
 
     # Assert the original and retrieved are not isolated
-    assert retrieved["a"] == [1, 2, 3, 4], "Deepcopy override on save did not work correctly."
+    assert retrieved["a"] == [
+        1,
+        2,
+        3,
+        4,
+    ], "Deepcopy override on save did not work correctly."
+
+
+def test_update_all_leaf_nodes(setup_manager):
+    """Test updating all snapshots' leaf nodes in place."""
+    manager = PyTreeSnapshotManager()
+
+    # Save snapshots
+    manager.save_snapshot({"a": 1, "b": {"x": 2}}, snapshot_id="snap1")
+    manager.save_snapshot({"c": 3, "d": {"y": 4}}, snapshot_id="snap2")
+
+    # Apply an in-place transformation to all snapshots
+    manager.update_all_leaf_nodes(lambda x: x + 10)
+
+    # Verify transformations
+    snapshot1 = manager.get_snapshot("snap1", deepcopy=False)
+    snapshot2 = manager.get_snapshot("snap2", deepcopy=False)
+    assert (
+        snapshot1["a"] == 11 and snapshot1["b"]["x"] == 12
+    ), "Snapshot1 not updated correctly."
+    assert (
+        snapshot2["c"] == 13 and snapshot2["d"]["y"] == 14
+    ), "Snapshot2 not updated correctly."
+
+
+def test_inplace_leaf_transformation(setup_manager):
+    """Test in-place leaf transformation for specific snapshots."""
+    manager = PyTreeSnapshotManager()
+
+    # Save snapshots
+    snapshot_id1 = manager.save_snapshot({"a": 1, "b": {"x": 2}})
+    snapshot_id2 = manager.save_snapshot({"c": 3, "d": {"y": 4}})
+
+    # Apply an in-place transformation to double each leaf value
+    manager.update_leaf_nodes([snapshot_id1, snapshot_id2], lambda x: x * 2)
+
+    # Retrieve the snapshots and verify transformation
+    snapshot1 = manager.get_snapshot(snapshot_id1, deepcopy=False)
+    snapshot2 = manager.get_snapshot(snapshot_id2, deepcopy=False)
+    assert (
+        snapshot1["a"] == 2 and snapshot1["b"]["x"] == 4
+    ), "Snapshot1 not transformed correctly."
+    assert (
+        snapshot2["c"] == 6 and snapshot2["d"]["y"] == 8
+    ), "Snapshot2 not transformed correctly."

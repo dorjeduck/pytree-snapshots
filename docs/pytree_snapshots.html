@@ -165,7 +165,10 @@
                                 <a class="function" href="#PyTreeSnapshotManager.save_snapshot">save_snapshot</a>
                         </li>
                         <li>
-                                <a class="function" href="#PyTreeSnapshotManager.apply_leaf_transformation">apply_leaf_transformation</a>
+                                <a class="function" href="#PyTreeSnapshotManager.update_leaf_nodes">update_leaf_nodes</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#PyTreeSnapshotManager.update_all_leaf_nodes">update_all_leaf_nodes</a>
                         </li>
                 </ul>
 
@@ -180,7 +183,7 @@
                                 <a class="function" href="#PyTreeSnapshot.validate_pytree">validate_pytree</a>
                         </li>
                         <li>
-                                <a class="function" href="#PyTreeSnapshot.apply_leaf_transformation">apply_leaf_transformation</a>
+                                <a class="function" href="#PyTreeSnapshot.update_leaf_nodes">update_leaf_nodes</a>
                         </li>
                 </ul>
 
@@ -2243,94 +2246,106 @@ otherwise by their age (insertion order).</p>
 
     </div>
     <a class="headerlink" href="#PyTreeSnapshotManager"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="PyTreeSnapshotManager-11"><a href="#PyTreeSnapshotManager-11"><span class="linenos">11</span></a><span class="k">class</span> <span class="nc">PyTreeSnapshotManager</span><span class="p">(</span><span class="n">SnapshotManager</span><span class="p">):</span>
-</span><span id="PyTreeSnapshotManager-12"><a href="#PyTreeSnapshotManager-12"><span class="linenos">12</span></a>
-</span><span id="PyTreeSnapshotManager-13"><a href="#PyTreeSnapshotManager-13"><span class="linenos">13</span></a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">query_class</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-</span><span id="PyTreeSnapshotManager-14"><a href="#PyTreeSnapshotManager-14"><span class="linenos">14</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="PyTreeSnapshotManager-15"><a href="#PyTreeSnapshotManager-15"><span class="linenos">15</span></a><span class="sd">        Initialize the PyTreeSnapshotManager.</span>
-</span><span id="PyTreeSnapshotManager-16"><a href="#PyTreeSnapshotManager-16"><span class="linenos">16</span></a>
-</span><span id="PyTreeSnapshotManager-17"><a href="#PyTreeSnapshotManager-17"><span class="linenos">17</span></a><span class="sd">        Args:</span>
-</span><span id="PyTreeSnapshotManager-18"><a href="#PyTreeSnapshotManager-18"><span class="linenos">18</span></a><span class="sd">            query_class (type, optional): A class implementing PyTreeSnapshotQueryInterface.</span>
-</span><span id="PyTreeSnapshotManager-19"><a href="#PyTreeSnapshotManager-19"><span class="linenos">19</span></a><span class="sd">                                           Defaults to PyTreeSnapshotQuery.</span>
-</span><span id="PyTreeSnapshotManager-20"><a href="#PyTreeSnapshotManager-20"><span class="linenos">20</span></a><span class="sd">        &quot;&quot;&quot;</span>
-</span><span id="PyTreeSnapshotManager-21"><a href="#PyTreeSnapshotManager-21"><span class="linenos">21</span></a>        <span class="c1"># Default to PyTreeSnapshotQuery if no query class is provided</span>
-</span><span id="PyTreeSnapshotManager-22"><a href="#PyTreeSnapshotManager-22"><span class="linenos">22</span></a>        <span class="n">query_class</span> <span class="o">=</span> <span class="n">query_class</span> <span class="ow">or</span> <span class="n">PyTreeSnapshotQuery</span>
-</span><span id="PyTreeSnapshotManager-23"><a href="#PyTreeSnapshotManager-23"><span class="linenos">23</span></a>
-</span><span id="PyTreeSnapshotManager-24"><a href="#PyTreeSnapshotManager-24"><span class="linenos">24</span></a>        <span class="c1"># Validate that the provided query class implements PyTreeSnapshotQueryInterface</span>
-</span><span id="PyTreeSnapshotManager-25"><a href="#PyTreeSnapshotManager-25"><span class="linenos">25</span></a>        <span class="k">if</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">query_class</span><span class="p">,</span> <span class="n">PyTreeSnapshotQueryInterface</span><span class="p">):</span>
-</span><span id="PyTreeSnapshotManager-26"><a href="#PyTreeSnapshotManager-26"><span class="linenos">26</span></a>            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-</span><span id="PyTreeSnapshotManager-27"><a href="#PyTreeSnapshotManager-27"><span class="linenos">27</span></a>                <span class="sa">f</span><span class="s2">&quot;The query_class must implement PyTreeSnapshotQueryInterface. &quot;</span>
-</span><span id="PyTreeSnapshotManager-28"><a href="#PyTreeSnapshotManager-28"><span class="linenos">28</span></a>                <span class="sa">f</span><span class="s2">&quot;Received: </span><span class="si">{</span><span class="n">query_class</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span id="PyTreeSnapshotManager-29"><a href="#PyTreeSnapshotManager-29"><span class="linenos">29</span></a>            <span class="p">)</span>
-</span><span id="PyTreeSnapshotManager-30"><a href="#PyTreeSnapshotManager-30"><span class="linenos">30</span></a>
-</span><span id="PyTreeSnapshotManager-31"><a href="#PyTreeSnapshotManager-31"><span class="linenos">31</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">query_class</span><span class="o">=</span><span class="n">query_class</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-</span><span id="PyTreeSnapshotManager-32"><a href="#PyTreeSnapshotManager-32"><span class="linenos">32</span></a>
-</span><span id="PyTreeSnapshotManager-33"><a href="#PyTreeSnapshotManager-33"><span class="linenos">33</span></a>    <span class="k">def</span> <span class="nf">save_snapshot</span><span class="p">(</span>
-</span><span id="PyTreeSnapshotManager-34"><a href="#PyTreeSnapshotManager-34"><span class="linenos">34</span></a>        <span class="bp">self</span><span class="p">,</span>
-</span><span id="PyTreeSnapshotManager-35"><a href="#PyTreeSnapshotManager-35"><span class="linenos">35</span></a>        <span class="n">pytree</span><span class="p">,</span>
-</span><span id="PyTreeSnapshotManager-36"><a href="#PyTreeSnapshotManager-36"><span class="linenos">36</span></a>        <span class="n">snapshot_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-</span><span id="PyTreeSnapshotManager-37"><a href="#PyTreeSnapshotManager-37"><span class="linenos">37</span></a>        <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-</span><span id="PyTreeSnapshotManager-38"><a href="#PyTreeSnapshotManager-38"><span class="linenos">38</span></a>        <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-</span><span id="PyTreeSnapshotManager-39"><a href="#PyTreeSnapshotManager-39"><span class="linenos">39</span></a>        <span class="n">overwrite</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-</span><span id="PyTreeSnapshotManager-40"><a href="#PyTreeSnapshotManager-40"><span class="linenos">40</span></a>    <span class="p">):</span>
-</span><span id="PyTreeSnapshotManager-41"><a href="#PyTreeSnapshotManager-41"><span class="linenos">41</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="PyTreeSnapshotManager-42"><a href="#PyTreeSnapshotManager-42"><span class="linenos">42</span></a><span class="sd">        Save a PyTree snapshot.</span>
-</span><span id="PyTreeSnapshotManager-43"><a href="#PyTreeSnapshotManager-43"><span class="linenos">43</span></a>
-</span><span id="PyTreeSnapshotManager-44"><a href="#PyTreeSnapshotManager-44"><span class="linenos">44</span></a><span class="sd">        Args:</span>
-</span><span id="PyTreeSnapshotManager-45"><a href="#PyTreeSnapshotManager-45"><span class="linenos">45</span></a><span class="sd">            pytree: The PyTree to save.</span>
-</span><span id="PyTreeSnapshotManager-46"><a href="#PyTreeSnapshotManager-46"><span class="linenos">46</span></a><span class="sd">            snapshot_id (str, optional): A unique identifier for the snapshot. If None, a new UUID is generated.</span>
-</span><span id="PyTreeSnapshotManager-47"><a href="#PyTreeSnapshotManager-47"><span class="linenos">47</span></a><span class="sd">            metadata (dict, optional): Metadata to associate with the snapshot.</span>
-</span><span id="PyTreeSnapshotManager-48"><a href="#PyTreeSnapshotManager-48"><span class="linenos">48</span></a><span class="sd">            tags (list, optional): Tags to associate with the snapshot.</span>
-</span><span id="PyTreeSnapshotManager-49"><a href="#PyTreeSnapshotManager-49"><span class="linenos">49</span></a><span class="sd">            overwrite (bool): Whether to overwrite an existing snapshot.</span>
-</span><span id="PyTreeSnapshotManager-50"><a href="#PyTreeSnapshotManager-50"><span class="linenos">50</span></a>
-</span><span id="PyTreeSnapshotManager-51"><a href="#PyTreeSnapshotManager-51"><span class="linenos">51</span></a><span class="sd">        Returns:</span>
-</span><span id="PyTreeSnapshotManager-52"><a href="#PyTreeSnapshotManager-52"><span class="linenos">52</span></a><span class="sd">            str: The ID of the saved snapshot.</span>
-</span><span id="PyTreeSnapshotManager-53"><a href="#PyTreeSnapshotManager-53"><span class="linenos">53</span></a><span class="sd">        &quot;&quot;&quot;</span>
-</span><span id="PyTreeSnapshotManager-54"><a href="#PyTreeSnapshotManager-54"><span class="linenos">54</span></a>        <span class="n">snapshot_id</span> <span class="o">=</span> <span class="n">snapshot_id</span> <span class="ow">or</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
-</span><span id="PyTreeSnapshotManager-55"><a href="#PyTreeSnapshotManager-55"><span class="linenos">55</span></a>    
-</span><span id="PyTreeSnapshotManager-56"><a href="#PyTreeSnapshotManager-56"><span class="linenos">56</span></a>        <span class="n">snapshot</span> <span class="o">=</span> <span class="n">PyTreeSnapshot</span><span class="p">(</span><span class="n">pytree</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">tags</span><span class="p">)</span>
-</span><span id="PyTreeSnapshotManager-57"><a href="#PyTreeSnapshotManager-57"><span class="linenos">57</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">add_snapshot</span><span class="p">(</span><span class="n">snapshot_id</span><span class="p">,</span> <span class="n">snapshot</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="n">overwrite</span><span class="p">)</span>
-</span><span id="PyTreeSnapshotManager-58"><a href="#PyTreeSnapshotManager-58"><span class="linenos">58</span></a>        <span class="k">return</span> <span class="n">snapshot_id</span>
-</span><span id="PyTreeSnapshotManager-59"><a href="#PyTreeSnapshotManager-59"><span class="linenos">59</span></a>
-</span><span id="PyTreeSnapshotManager-60"><a href="#PyTreeSnapshotManager-60"><span class="linenos">60</span></a>    <span class="k">def</span> <span class="nf">apply_leaf_transformation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">snapshot_ids</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">deepcopy</span><span class="o">=</span><span class="n">DEFAULT</span><span class="p">):</span>
-</span><span id="PyTreeSnapshotManager-61"><a href="#PyTreeSnapshotManager-61"><span class="linenos">61</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="PyTreeSnapshotManager-62"><a href="#PyTreeSnapshotManager-62"><span class="linenos">62</span></a><span class="sd">        Apply a transformation function to one or more snapshots&#39; PyTrees.</span>
-</span><span id="PyTreeSnapshotManager-63"><a href="#PyTreeSnapshotManager-63"><span class="linenos">63</span></a>
-</span><span id="PyTreeSnapshotManager-64"><a href="#PyTreeSnapshotManager-64"><span class="linenos">64</span></a><span class="sd">        Args:</span>
-</span><span id="PyTreeSnapshotManager-65"><a href="#PyTreeSnapshotManager-65"><span class="linenos">65</span></a><span class="sd">            snapshot_ids (str or list): The ID(s) of the snapshot(s) to transform.</span>
-</span><span id="PyTreeSnapshotManager-66"><a href="#PyTreeSnapshotManager-66"><span class="linenos">66</span></a><span class="sd">            func (callable): A function to apply to each leaf of the PyTree.</span>
-</span><span id="PyTreeSnapshotManager-67"><a href="#PyTreeSnapshotManager-67"><span class="linenos">67</span></a><span class="sd">            deepcopy (bool): Whether to return a deep copy of the transformed PyTree(s).</span>
-</span><span id="PyTreeSnapshotManager-68"><a href="#PyTreeSnapshotManager-68"><span class="linenos">68</span></a><span class="sd">                            Defaults to the manager&#39;s deepcopy setting.</span>
-</span><span id="PyTreeSnapshotManager-69"><a href="#PyTreeSnapshotManager-69"><span class="linenos">69</span></a>
-</span><span id="PyTreeSnapshotManager-70"><a href="#PyTreeSnapshotManager-70"><span class="linenos">70</span></a><span class="sd">        Returns:</span>
-</span><span id="PyTreeSnapshotManager-71"><a href="#PyTreeSnapshotManager-71"><span class="linenos">71</span></a><span class="sd">            Transformed PyTree or list of transformed PyTrees.</span>
-</span><span id="PyTreeSnapshotManager-72"><a href="#PyTreeSnapshotManager-72"><span class="linenos">72</span></a><span class="sd">        &quot;&quot;&quot;</span>
-</span><span id="PyTreeSnapshotManager-73"><a href="#PyTreeSnapshotManager-73"><span class="linenos">73</span></a>        <span class="c1"># Resolve DEFAULT to the manager&#39;s deepcopy setting</span>
-</span><span id="PyTreeSnapshotManager-74"><a href="#PyTreeSnapshotManager-74"><span class="linenos">74</span></a>        <span class="n">deepcopy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">deepcopy_on_retrieve</span> <span class="k">if</span> <span class="n">deepcopy</span> <span class="ow">is</span> <span class="n">DEFAULT</span> <span class="k">else</span> <span class="n">deepcopy</span>
-</span><span id="PyTreeSnapshotManager-75"><a href="#PyTreeSnapshotManager-75"><span class="linenos">75</span></a>
-</span><span id="PyTreeSnapshotManager-76"><a href="#PyTreeSnapshotManager-76"><span class="linenos">76</span></a>        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">snapshot_ids</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-</span><span id="PyTreeSnapshotManager-77"><a href="#PyTreeSnapshotManager-77"><span class="linenos">77</span></a>            <span class="c1"># Single snapshot case</span>
-</span><span id="PyTreeSnapshotManager-78"><a href="#PyTreeSnapshotManager-78"><span class="linenos">78</span></a>            <span class="n">snapshot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">get_snapshot</span><span class="p">(</span><span class="n">snapshot_ids</span><span class="p">,</span> <span class="n">deepcopy</span><span class="o">=</span><span class="n">deepcopy</span><span class="p">)</span>
-</span><span id="PyTreeSnapshotManager-79"><a href="#PyTreeSnapshotManager-79"><span class="linenos">79</span></a>            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">snapshot</span><span class="p">,</span> <span class="n">PyTreeSnapshot</span><span class="p">):</span>
-</span><span id="PyTreeSnapshotManager-80"><a href="#PyTreeSnapshotManager-80"><span class="linenos">80</span></a>                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Snapshot is not a PyTreeSnapshot.&quot;</span><span class="p">)</span>
-</span><span id="PyTreeSnapshotManager-81"><a href="#PyTreeSnapshotManager-81"><span class="linenos">81</span></a>            <span class="k">return</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">apply_leaf_transformation</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
-</span><span id="PyTreeSnapshotManager-82"><a href="#PyTreeSnapshotManager-82"><span class="linenos">82</span></a>
-</span><span id="PyTreeSnapshotManager-83"><a href="#PyTreeSnapshotManager-83"><span class="linenos">83</span></a>        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">snapshot_ids</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
-</span><span id="PyTreeSnapshotManager-84"><a href="#PyTreeSnapshotManager-84"><span class="linenos">84</span></a>            <span class="c1"># Multiple snapshots case</span>
-</span><span id="PyTreeSnapshotManager-85"><a href="#PyTreeSnapshotManager-85"><span class="linenos">85</span></a>            <span class="n">transformed_pytree_list</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="PyTreeSnapshotManager-86"><a href="#PyTreeSnapshotManager-86"><span class="linenos">86</span></a>            <span class="k">for</span> <span class="n">snapshot_id</span> <span class="ow">in</span> <span class="n">snapshot_ids</span><span class="p">:</span>
-</span><span id="PyTreeSnapshotManager-87"><a href="#PyTreeSnapshotManager-87"><span class="linenos">87</span></a>                <span class="n">snapshot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">get_snapshot</span><span class="p">(</span><span class="n">snapshot_id</span><span class="p">,</span> <span class="n">deepcopy</span><span class="o">=</span><span class="n">deepcopy</span><span class="p">)</span>
-</span><span id="PyTreeSnapshotManager-88"><a href="#PyTreeSnapshotManager-88"><span class="linenos">88</span></a>                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">snapshot</span><span class="p">,</span> <span class="n">PyTreeSnapshot</span><span class="p">):</span>
-</span><span id="PyTreeSnapshotManager-89"><a href="#PyTreeSnapshotManager-89"><span class="linenos">89</span></a>                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-</span><span id="PyTreeSnapshotManager-90"><a href="#PyTreeSnapshotManager-90"><span class="linenos">90</span></a>                        <span class="sa">f</span><span class="s2">&quot;Snapshot with ID </span><span class="si">{</span><span class="n">snapshot_id</span><span class="si">}</span><span class="s2"> is not a PyTreeSnapshot.&quot;</span>
-</span><span id="PyTreeSnapshotManager-91"><a href="#PyTreeSnapshotManager-91"><span class="linenos">91</span></a>                    <span class="p">)</span>
-</span><span id="PyTreeSnapshotManager-92"><a href="#PyTreeSnapshotManager-92"><span class="linenos">92</span></a>                <span class="n">transformed_pytree_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">snapshot</span><span class="o">.</span><span class="n">apply_leaf_transformation</span><span class="p">(</span><span class="n">func</span><span class="p">))</span>
-</span><span id="PyTreeSnapshotManager-93"><a href="#PyTreeSnapshotManager-93"><span class="linenos">93</span></a>            <span class="k">return</span> <span class="n">transformed_pytree_list</span>
-</span><span id="PyTreeSnapshotManager-94"><a href="#PyTreeSnapshotManager-94"><span class="linenos">94</span></a>
-</span><span id="PyTreeSnapshotManager-95"><a href="#PyTreeSnapshotManager-95"><span class="linenos">95</span></a>        <span class="k">else</span><span class="p">:</span>
-</span><span id="PyTreeSnapshotManager-96"><a href="#PyTreeSnapshotManager-96"><span class="linenos">96</span></a>            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-</span><span id="PyTreeSnapshotManager-97"><a href="#PyTreeSnapshotManager-97"><span class="linenos">97</span></a>                <span class="s2">&quot;snapshot_ids must be a string (single ID) or a list of strings (multiple IDs).&quot;</span>
-</span><span id="PyTreeSnapshotManager-98"><a href="#PyTreeSnapshotManager-98"><span class="linenos">98</span></a>            <span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="PyTreeSnapshotManager-11"><a href="#PyTreeSnapshotManager-11"><span class="linenos"> 11</span></a><span class="k">class</span> <span class="nc">PyTreeSnapshotManager</span><span class="p">(</span><span class="n">SnapshotManager</span><span class="p">):</span>
+</span><span id="PyTreeSnapshotManager-12"><a href="#PyTreeSnapshotManager-12"><span class="linenos"> 12</span></a>
+</span><span id="PyTreeSnapshotManager-13"><a href="#PyTreeSnapshotManager-13"><span class="linenos"> 13</span></a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">query_class</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</span><span id="PyTreeSnapshotManager-14"><a href="#PyTreeSnapshotManager-14"><span class="linenos"> 14</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="PyTreeSnapshotManager-15"><a href="#PyTreeSnapshotManager-15"><span class="linenos"> 15</span></a><span class="sd">        Initialize the PyTreeSnapshotManager.</span>
+</span><span id="PyTreeSnapshotManager-16"><a href="#PyTreeSnapshotManager-16"><span class="linenos"> 16</span></a>
+</span><span id="PyTreeSnapshotManager-17"><a href="#PyTreeSnapshotManager-17"><span class="linenos"> 17</span></a><span class="sd">        Args:</span>
+</span><span id="PyTreeSnapshotManager-18"><a href="#PyTreeSnapshotManager-18"><span class="linenos"> 18</span></a><span class="sd">            query_class (type, optional): A class implementing PyTreeSnapshotQueryInterface.</span>
+</span><span id="PyTreeSnapshotManager-19"><a href="#PyTreeSnapshotManager-19"><span class="linenos"> 19</span></a><span class="sd">                                           Defaults to PyTreeSnapshotQuery.</span>
+</span><span id="PyTreeSnapshotManager-20"><a href="#PyTreeSnapshotManager-20"><span class="linenos"> 20</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="PyTreeSnapshotManager-21"><a href="#PyTreeSnapshotManager-21"><span class="linenos"> 21</span></a>        <span class="c1"># Default to PyTreeSnapshotQuery if no query class is provided</span>
+</span><span id="PyTreeSnapshotManager-22"><a href="#PyTreeSnapshotManager-22"><span class="linenos"> 22</span></a>        <span class="n">query_class</span> <span class="o">=</span> <span class="n">query_class</span> <span class="ow">or</span> <span class="n">PyTreeSnapshotQuery</span>
+</span><span id="PyTreeSnapshotManager-23"><a href="#PyTreeSnapshotManager-23"><span class="linenos"> 23</span></a>
+</span><span id="PyTreeSnapshotManager-24"><a href="#PyTreeSnapshotManager-24"><span class="linenos"> 24</span></a>        <span class="c1"># Validate that the provided query class implements PyTreeSnapshotQueryInterface</span>
+</span><span id="PyTreeSnapshotManager-25"><a href="#PyTreeSnapshotManager-25"><span class="linenos"> 25</span></a>        <span class="k">if</span> <span class="ow">not</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">query_class</span><span class="p">,</span> <span class="n">PyTreeSnapshotQueryInterface</span><span class="p">):</span>
+</span><span id="PyTreeSnapshotManager-26"><a href="#PyTreeSnapshotManager-26"><span class="linenos"> 26</span></a>            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+</span><span id="PyTreeSnapshotManager-27"><a href="#PyTreeSnapshotManager-27"><span class="linenos"> 27</span></a>                <span class="sa">f</span><span class="s2">&quot;The query_class must implement PyTreeSnapshotQueryInterface. &quot;</span>
+</span><span id="PyTreeSnapshotManager-28"><a href="#PyTreeSnapshotManager-28"><span class="linenos"> 28</span></a>                <span class="sa">f</span><span class="s2">&quot;Received: </span><span class="si">{</span><span class="n">query_class</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span id="PyTreeSnapshotManager-29"><a href="#PyTreeSnapshotManager-29"><span class="linenos"> 29</span></a>            <span class="p">)</span>
+</span><span id="PyTreeSnapshotManager-30"><a href="#PyTreeSnapshotManager-30"><span class="linenos"> 30</span></a>
+</span><span id="PyTreeSnapshotManager-31"><a href="#PyTreeSnapshotManager-31"><span class="linenos"> 31</span></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">query_class</span><span class="o">=</span><span class="n">query_class</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</span><span id="PyTreeSnapshotManager-32"><a href="#PyTreeSnapshotManager-32"><span class="linenos"> 32</span></a>
+</span><span id="PyTreeSnapshotManager-33"><a href="#PyTreeSnapshotManager-33"><span class="linenos"> 33</span></a>    <span class="k">def</span> <span class="nf">save_snapshot</span><span class="p">(</span>
+</span><span id="PyTreeSnapshotManager-34"><a href="#PyTreeSnapshotManager-34"><span class="linenos"> 34</span></a>        <span class="bp">self</span><span class="p">,</span>
+</span><span id="PyTreeSnapshotManager-35"><a href="#PyTreeSnapshotManager-35"><span class="linenos"> 35</span></a>        <span class="n">pytree</span><span class="p">,</span>
+</span><span id="PyTreeSnapshotManager-36"><a href="#PyTreeSnapshotManager-36"><span class="linenos"> 36</span></a>        <span class="n">snapshot_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span><span id="PyTreeSnapshotManager-37"><a href="#PyTreeSnapshotManager-37"><span class="linenos"> 37</span></a>        <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span><span id="PyTreeSnapshotManager-38"><a href="#PyTreeSnapshotManager-38"><span class="linenos"> 38</span></a>        <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+</span><span id="PyTreeSnapshotManager-39"><a href="#PyTreeSnapshotManager-39"><span class="linenos"> 39</span></a>        <span class="n">overwrite</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+</span><span id="PyTreeSnapshotManager-40"><a href="#PyTreeSnapshotManager-40"><span class="linenos"> 40</span></a>    <span class="p">):</span>
+</span><span id="PyTreeSnapshotManager-41"><a href="#PyTreeSnapshotManager-41"><span class="linenos"> 41</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="PyTreeSnapshotManager-42"><a href="#PyTreeSnapshotManager-42"><span class="linenos"> 42</span></a><span class="sd">        Save a PyTree snapshot.</span>
+</span><span id="PyTreeSnapshotManager-43"><a href="#PyTreeSnapshotManager-43"><span class="linenos"> 43</span></a>
+</span><span id="PyTreeSnapshotManager-44"><a href="#PyTreeSnapshotManager-44"><span class="linenos"> 44</span></a><span class="sd">        Args:</span>
+</span><span id="PyTreeSnapshotManager-45"><a href="#PyTreeSnapshotManager-45"><span class="linenos"> 45</span></a><span class="sd">            pytree: The PyTree to save.</span>
+</span><span id="PyTreeSnapshotManager-46"><a href="#PyTreeSnapshotManager-46"><span class="linenos"> 46</span></a><span class="sd">            snapshot_id (str, optional): A unique identifier for the snapshot. If None, a new UUID is generated.</span>
+</span><span id="PyTreeSnapshotManager-47"><a href="#PyTreeSnapshotManager-47"><span class="linenos"> 47</span></a><span class="sd">            metadata (dict, optional): Metadata to associate with the snapshot.</span>
+</span><span id="PyTreeSnapshotManager-48"><a href="#PyTreeSnapshotManager-48"><span class="linenos"> 48</span></a><span class="sd">            tags (list, optional): Tags to associate with the snapshot.</span>
+</span><span id="PyTreeSnapshotManager-49"><a href="#PyTreeSnapshotManager-49"><span class="linenos"> 49</span></a><span class="sd">            overwrite (bool): Whether to overwrite an existing snapshot.</span>
+</span><span id="PyTreeSnapshotManager-50"><a href="#PyTreeSnapshotManager-50"><span class="linenos"> 50</span></a>
+</span><span id="PyTreeSnapshotManager-51"><a href="#PyTreeSnapshotManager-51"><span class="linenos"> 51</span></a><span class="sd">        Returns:</span>
+</span><span id="PyTreeSnapshotManager-52"><a href="#PyTreeSnapshotManager-52"><span class="linenos"> 52</span></a><span class="sd">            str: The ID of the saved snapshot.</span>
+</span><span id="PyTreeSnapshotManager-53"><a href="#PyTreeSnapshotManager-53"><span class="linenos"> 53</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="PyTreeSnapshotManager-54"><a href="#PyTreeSnapshotManager-54"><span class="linenos"> 54</span></a>        <span class="n">snapshot_id</span> <span class="o">=</span> <span class="n">snapshot_id</span> <span class="ow">or</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
+</span><span id="PyTreeSnapshotManager-55"><a href="#PyTreeSnapshotManager-55"><span class="linenos"> 55</span></a>
+</span><span id="PyTreeSnapshotManager-56"><a href="#PyTreeSnapshotManager-56"><span class="linenos"> 56</span></a>        <span class="n">snapshot</span> <span class="o">=</span> <span class="n">PyTreeSnapshot</span><span class="p">(</span><span class="n">pytree</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">tags</span><span class="p">)</span>
+</span><span id="PyTreeSnapshotManager-57"><a href="#PyTreeSnapshotManager-57"><span class="linenos"> 57</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">add_snapshot</span><span class="p">(</span><span class="n">snapshot_id</span><span class="p">,</span> <span class="n">snapshot</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="n">overwrite</span><span class="p">)</span>
+</span><span id="PyTreeSnapshotManager-58"><a href="#PyTreeSnapshotManager-58"><span class="linenos"> 58</span></a>        <span class="k">return</span> <span class="n">snapshot_id</span>
+</span><span id="PyTreeSnapshotManager-59"><a href="#PyTreeSnapshotManager-59"><span class="linenos"> 59</span></a>
+</span><span id="PyTreeSnapshotManager-60"><a href="#PyTreeSnapshotManager-60"><span class="linenos"> 60</span></a>    <span class="k">def</span> <span class="nf">update_leaf_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">snapshot_ids</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+</span><span id="PyTreeSnapshotManager-61"><a href="#PyTreeSnapshotManager-61"><span class="linenos"> 61</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="PyTreeSnapshotManager-62"><a href="#PyTreeSnapshotManager-62"><span class="linenos"> 62</span></a><span class="sd">        Apply a transformation function to one or more snapshots&#39; PyTrees.</span>
+</span><span id="PyTreeSnapshotManager-63"><a href="#PyTreeSnapshotManager-63"><span class="linenos"> 63</span></a>
+</span><span id="PyTreeSnapshotManager-64"><a href="#PyTreeSnapshotManager-64"><span class="linenos"> 64</span></a><span class="sd">        Args:</span>
+</span><span id="PyTreeSnapshotManager-65"><a href="#PyTreeSnapshotManager-65"><span class="linenos"> 65</span></a><span class="sd">            snapshot_ids (str or list): The ID(s) of the snapshot(s) to transform.</span>
+</span><span id="PyTreeSnapshotManager-66"><a href="#PyTreeSnapshotManager-66"><span class="linenos"> 66</span></a><span class="sd">            func (callable): A function to apply to each leaf of the PyTree.</span>
+</span><span id="PyTreeSnapshotManager-67"><a href="#PyTreeSnapshotManager-67"><span class="linenos"> 67</span></a>
+</span><span id="PyTreeSnapshotManager-68"><a href="#PyTreeSnapshotManager-68"><span class="linenos"> 68</span></a><span class="sd">        Returns:</span>
+</span><span id="PyTreeSnapshotManager-69"><a href="#PyTreeSnapshotManager-69"><span class="linenos"> 69</span></a><span class="sd">            Transformed PyTree or list of transformed PyTrees.</span>
+</span><span id="PyTreeSnapshotManager-70"><a href="#PyTreeSnapshotManager-70"><span class="linenos"> 70</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="PyTreeSnapshotManager-71"><a href="#PyTreeSnapshotManager-71"><span class="linenos"> 71</span></a>
+</span><span id="PyTreeSnapshotManager-72"><a href="#PyTreeSnapshotManager-72"><span class="linenos"> 72</span></a>        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">snapshot_ids</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+</span><span id="PyTreeSnapshotManager-73"><a href="#PyTreeSnapshotManager-73"><span class="linenos"> 73</span></a>            <span class="c1"># Single snapshot case</span>
+</span><span id="PyTreeSnapshotManager-74"><a href="#PyTreeSnapshotManager-74"><span class="linenos"> 74</span></a>            <span class="n">snapshot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">get_snapshot</span><span class="p">(</span><span class="n">snapshot_ids</span><span class="p">)</span>
+</span><span id="PyTreeSnapshotManager-75"><a href="#PyTreeSnapshotManager-75"><span class="linenos"> 75</span></a>            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">snapshot</span><span class="p">,</span> <span class="n">PyTreeSnapshot</span><span class="p">):</span>
+</span><span id="PyTreeSnapshotManager-76"><a href="#PyTreeSnapshotManager-76"><span class="linenos"> 76</span></a>                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Snapshot is not a PyTreeSnapshot.&quot;</span><span class="p">)</span>
+</span><span id="PyTreeSnapshotManager-77"><a href="#PyTreeSnapshotManager-77"><span class="linenos"> 77</span></a>            <span class="n">snapshot</span><span class="o">.</span><span class="n">update_leaf_nodes</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+</span><span id="PyTreeSnapshotManager-78"><a href="#PyTreeSnapshotManager-78"><span class="linenos"> 78</span></a>
+</span><span id="PyTreeSnapshotManager-79"><a href="#PyTreeSnapshotManager-79"><span class="linenos"> 79</span></a>        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">snapshot_ids</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+</span><span id="PyTreeSnapshotManager-80"><a href="#PyTreeSnapshotManager-80"><span class="linenos"> 80</span></a>            <span class="c1"># Multiple snapshots case</span>
+</span><span id="PyTreeSnapshotManager-81"><a href="#PyTreeSnapshotManager-81"><span class="linenos"> 81</span></a>            <span class="k">for</span> <span class="n">snapshot_id</span> <span class="ow">in</span> <span class="n">snapshot_ids</span><span class="p">:</span>
+</span><span id="PyTreeSnapshotManager-82"><a href="#PyTreeSnapshotManager-82"><span class="linenos"> 82</span></a>                <span class="n">snapshot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">get_snapshot</span><span class="p">(</span><span class="n">snapshot_id</span><span class="p">)</span>
+</span><span id="PyTreeSnapshotManager-83"><a href="#PyTreeSnapshotManager-83"><span class="linenos"> 83</span></a>                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">snapshot</span><span class="p">,</span> <span class="n">PyTreeSnapshot</span><span class="p">):</span>
+</span><span id="PyTreeSnapshotManager-84"><a href="#PyTreeSnapshotManager-84"><span class="linenos"> 84</span></a>                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+</span><span id="PyTreeSnapshotManager-85"><a href="#PyTreeSnapshotManager-85"><span class="linenos"> 85</span></a>                        <span class="sa">f</span><span class="s2">&quot;Snapshot with ID </span><span class="si">{</span><span class="n">snapshot_id</span><span class="si">}</span><span class="s2"> is not a PyTreeSnapshot.&quot;</span>
+</span><span id="PyTreeSnapshotManager-86"><a href="#PyTreeSnapshotManager-86"><span class="linenos"> 86</span></a>                    <span class="p">)</span>
+</span><span id="PyTreeSnapshotManager-87"><a href="#PyTreeSnapshotManager-87"><span class="linenos"> 87</span></a>                <span class="n">snapshot</span><span class="o">.</span><span class="n">update_leaf_nodes</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+</span><span id="PyTreeSnapshotManager-88"><a href="#PyTreeSnapshotManager-88"><span class="linenos"> 88</span></a>
+</span><span id="PyTreeSnapshotManager-89"><a href="#PyTreeSnapshotManager-89"><span class="linenos"> 89</span></a>        <span class="k">else</span><span class="p">:</span>
+</span><span id="PyTreeSnapshotManager-90"><a href="#PyTreeSnapshotManager-90"><span class="linenos"> 90</span></a>            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+</span><span id="PyTreeSnapshotManager-91"><a href="#PyTreeSnapshotManager-91"><span class="linenos"> 91</span></a>                <span class="s2">&quot;snapshot_ids must be a string (single ID) or a list of strings (multiple IDs).&quot;</span>
+</span><span id="PyTreeSnapshotManager-92"><a href="#PyTreeSnapshotManager-92"><span class="linenos"> 92</span></a>            <span class="p">)</span>
+</span><span id="PyTreeSnapshotManager-93"><a href="#PyTreeSnapshotManager-93"><span class="linenos"> 93</span></a>
+</span><span id="PyTreeSnapshotManager-94"><a href="#PyTreeSnapshotManager-94"><span class="linenos"> 94</span></a>    <span class="k">def</span> <span class="nf">update_all_leaf_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+</span><span id="PyTreeSnapshotManager-95"><a href="#PyTreeSnapshotManager-95"><span class="linenos"> 95</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="PyTreeSnapshotManager-96"><a href="#PyTreeSnapshotManager-96"><span class="linenos"> 96</span></a><span class="sd">        Apply a transformation function to all snapshots&#39; PyTrees currently managed.</span>
+</span><span id="PyTreeSnapshotManager-97"><a href="#PyTreeSnapshotManager-97"><span class="linenos"> 97</span></a>
+</span><span id="PyTreeSnapshotManager-98"><a href="#PyTreeSnapshotManager-98"><span class="linenos"> 98</span></a><span class="sd">        Args:</span>
+</span><span id="PyTreeSnapshotManager-99"><a href="#PyTreeSnapshotManager-99"><span class="linenos"> 99</span></a><span class="sd">            func (callable): A function to apply to each leaf of all PyTrees.</span>
+</span><span id="PyTreeSnapshotManager-100"><a href="#PyTreeSnapshotManager-100"><span class="linenos">100</span></a>
+</span><span id="PyTreeSnapshotManager-101"><a href="#PyTreeSnapshotManager-101"><span class="linenos">101</span></a><span class="sd">        Raises:</span>
+</span><span id="PyTreeSnapshotManager-102"><a href="#PyTreeSnapshotManager-102"><span class="linenos">102</span></a><span class="sd">            TypeError: If any snapshot is not a PyTreeSnapshot.</span>
+</span><span id="PyTreeSnapshotManager-103"><a href="#PyTreeSnapshotManager-103"><span class="linenos">103</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="PyTreeSnapshotManager-104"><a href="#PyTreeSnapshotManager-104"><span class="linenos">104</span></a>        <span class="k">for</span> <span class="n">snapshot_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">snapshots</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+</span><span id="PyTreeSnapshotManager-105"><a href="#PyTreeSnapshotManager-105"><span class="linenos">105</span></a>            <span class="n">snapshot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">get_snapshot</span><span class="p">(</span><span class="n">snapshot_id</span><span class="p">)</span>
+</span><span id="PyTreeSnapshotManager-106"><a href="#PyTreeSnapshotManager-106"><span class="linenos">106</span></a>            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">snapshot</span><span class="p">,</span> <span class="n">PyTreeSnapshot</span><span class="p">):</span>
+</span><span id="PyTreeSnapshotManager-107"><a href="#PyTreeSnapshotManager-107"><span class="linenos">107</span></a>                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+</span><span id="PyTreeSnapshotManager-108"><a href="#PyTreeSnapshotManager-108"><span class="linenos">108</span></a>                    <span class="sa">f</span><span class="s2">&quot;Snapshot with ID </span><span class="si">{</span><span class="n">snapshot_id</span><span class="si">}</span><span class="s2"> is not a PyTreeSnapshot.&quot;</span>
+</span><span id="PyTreeSnapshotManager-109"><a href="#PyTreeSnapshotManager-109"><span class="linenos">109</span></a>                <span class="p">)</span>
+</span><span id="PyTreeSnapshotManager-110"><a href="#PyTreeSnapshotManager-110"><span class="linenos">110</span></a>            <span class="n">snapshot</span><span class="o">.</span><span class="n">update_leaf_nodes</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
 </span></pre></div>
 
 
@@ -2412,7 +2427,7 @@ otherwise by their age (insertion order).</p>
 </span><span id="PyTreeSnapshotManager.save_snapshot-52"><a href="#PyTreeSnapshotManager.save_snapshot-52"><span class="linenos">52</span></a><span class="sd">            str: The ID of the saved snapshot.</span>
 </span><span id="PyTreeSnapshotManager.save_snapshot-53"><a href="#PyTreeSnapshotManager.save_snapshot-53"><span class="linenos">53</span></a><span class="sd">        &quot;&quot;&quot;</span>
 </span><span id="PyTreeSnapshotManager.save_snapshot-54"><a href="#PyTreeSnapshotManager.save_snapshot-54"><span class="linenos">54</span></a>        <span class="n">snapshot_id</span> <span class="o">=</span> <span class="n">snapshot_id</span> <span class="ow">or</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
-</span><span id="PyTreeSnapshotManager.save_snapshot-55"><a href="#PyTreeSnapshotManager.save_snapshot-55"><span class="linenos">55</span></a>    
+</span><span id="PyTreeSnapshotManager.save_snapshot-55"><a href="#PyTreeSnapshotManager.save_snapshot-55"><span class="linenos">55</span></a>
 </span><span id="PyTreeSnapshotManager.save_snapshot-56"><a href="#PyTreeSnapshotManager.save_snapshot-56"><span class="linenos">56</span></a>        <span class="n">snapshot</span> <span class="o">=</span> <span class="n">PyTreeSnapshot</span><span class="p">(</span><span class="n">pytree</span><span class="p">,</span> <span class="n">metadata</span><span class="p">,</span> <span class="n">tags</span><span class="p">)</span>
 </span><span id="PyTreeSnapshotManager.save_snapshot-57"><a href="#PyTreeSnapshotManager.save_snapshot-57"><span class="linenos">57</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">add_snapshot</span><span class="p">(</span><span class="n">snapshot_id</span><span class="p">,</span> <span class="n">snapshot</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="n">overwrite</span><span class="p">)</span>
 </span><span id="PyTreeSnapshotManager.save_snapshot-58"><a href="#PyTreeSnapshotManager.save_snapshot-58"><span class="linenos">58</span></a>        <span class="k">return</span> <span class="n">snapshot_id</span>
@@ -2434,56 +2449,50 @@ otherwise by their age (insertion order).</p>
 
 
                             </div>
-                            <div id="PyTreeSnapshotManager.apply_leaf_transformation" class="classattr">
-                                        <input id="PyTreeSnapshotManager.apply_leaf_transformation-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+                            <div id="PyTreeSnapshotManager.update_leaf_nodes" class="classattr">
+                                        <input id="PyTreeSnapshotManager.update_leaf_nodes-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">apply_leaf_transformation</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">snapshot_ids</span>, </span><span class="param"><span class="n">func</span>, </span><span class="param"><span class="n">deepcopy</span><span class="o">=&lt;</span><span class="nb">object</span> <span class="nb">object</span><span class="o">&gt;</span></span><span class="return-annotation">):</span></span>
+        <span class="name">update_leaf_nodes</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">snapshot_ids</span>, </span><span class="param"><span class="n">func</span></span><span class="return-annotation">):</span></span>
 
-                <label class="view-source-button" for="PyTreeSnapshotManager.apply_leaf_transformation-view-source"><span>View Source</span></label>
+                <label class="view-source-button" for="PyTreeSnapshotManager.update_leaf_nodes-view-source"><span>View Source</span></label>
 
     </div>
-    <a class="headerlink" href="#PyTreeSnapshotManager.apply_leaf_transformation"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="PyTreeSnapshotManager.apply_leaf_transformation-60"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-60"><span class="linenos">60</span></a>    <span class="k">def</span> <span class="nf">apply_leaf_transformation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">snapshot_ids</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">deepcopy</span><span class="o">=</span><span class="n">DEFAULT</span><span class="p">):</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-61"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-61"><span class="linenos">61</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-62"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-62"><span class="linenos">62</span></a><span class="sd">        Apply a transformation function to one or more snapshots&#39; PyTrees.</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-63"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-63"><span class="linenos">63</span></a>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-64"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-64"><span class="linenos">64</span></a><span class="sd">        Args:</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-65"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-65"><span class="linenos">65</span></a><span class="sd">            snapshot_ids (str or list): The ID(s) of the snapshot(s) to transform.</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-66"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-66"><span class="linenos">66</span></a><span class="sd">            func (callable): A function to apply to each leaf of the PyTree.</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-67"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-67"><span class="linenos">67</span></a><span class="sd">            deepcopy (bool): Whether to return a deep copy of the transformed PyTree(s).</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-68"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-68"><span class="linenos">68</span></a><span class="sd">                            Defaults to the manager&#39;s deepcopy setting.</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-69"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-69"><span class="linenos">69</span></a>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-70"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-70"><span class="linenos">70</span></a><span class="sd">        Returns:</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-71"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-71"><span class="linenos">71</span></a><span class="sd">            Transformed PyTree or list of transformed PyTrees.</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-72"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-72"><span class="linenos">72</span></a><span class="sd">        &quot;&quot;&quot;</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-73"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-73"><span class="linenos">73</span></a>        <span class="c1"># Resolve DEFAULT to the manager&#39;s deepcopy setting</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-74"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-74"><span class="linenos">74</span></a>        <span class="n">deepcopy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">deepcopy_on_retrieve</span> <span class="k">if</span> <span class="n">deepcopy</span> <span class="ow">is</span> <span class="n">DEFAULT</span> <span class="k">else</span> <span class="n">deepcopy</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-75"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-75"><span class="linenos">75</span></a>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-76"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-76"><span class="linenos">76</span></a>        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">snapshot_ids</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-77"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-77"><span class="linenos">77</span></a>            <span class="c1"># Single snapshot case</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-78"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-78"><span class="linenos">78</span></a>            <span class="n">snapshot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">get_snapshot</span><span class="p">(</span><span class="n">snapshot_ids</span><span class="p">,</span> <span class="n">deepcopy</span><span class="o">=</span><span class="n">deepcopy</span><span class="p">)</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-79"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-79"><span class="linenos">79</span></a>            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">snapshot</span><span class="p">,</span> <span class="n">PyTreeSnapshot</span><span class="p">):</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-80"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-80"><span class="linenos">80</span></a>                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Snapshot is not a PyTreeSnapshot.&quot;</span><span class="p">)</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-81"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-81"><span class="linenos">81</span></a>            <span class="k">return</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">apply_leaf_transformation</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-82"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-82"><span class="linenos">82</span></a>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-83"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-83"><span class="linenos">83</span></a>        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">snapshot_ids</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-84"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-84"><span class="linenos">84</span></a>            <span class="c1"># Multiple snapshots case</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-85"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-85"><span class="linenos">85</span></a>            <span class="n">transformed_pytree_list</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-86"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-86"><span class="linenos">86</span></a>            <span class="k">for</span> <span class="n">snapshot_id</span> <span class="ow">in</span> <span class="n">snapshot_ids</span><span class="p">:</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-87"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-87"><span class="linenos">87</span></a>                <span class="n">snapshot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">get_snapshot</span><span class="p">(</span><span class="n">snapshot_id</span><span class="p">,</span> <span class="n">deepcopy</span><span class="o">=</span><span class="n">deepcopy</span><span class="p">)</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-88"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-88"><span class="linenos">88</span></a>                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">snapshot</span><span class="p">,</span> <span class="n">PyTreeSnapshot</span><span class="p">):</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-89"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-89"><span class="linenos">89</span></a>                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-90"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-90"><span class="linenos">90</span></a>                        <span class="sa">f</span><span class="s2">&quot;Snapshot with ID </span><span class="si">{</span><span class="n">snapshot_id</span><span class="si">}</span><span class="s2"> is not a PyTreeSnapshot.&quot;</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-91"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-91"><span class="linenos">91</span></a>                    <span class="p">)</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-92"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-92"><span class="linenos">92</span></a>                <span class="n">transformed_pytree_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">snapshot</span><span class="o">.</span><span class="n">apply_leaf_transformation</span><span class="p">(</span><span class="n">func</span><span class="p">))</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-93"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-93"><span class="linenos">93</span></a>            <span class="k">return</span> <span class="n">transformed_pytree_list</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-94"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-94"><span class="linenos">94</span></a>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-95"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-95"><span class="linenos">95</span></a>        <span class="k">else</span><span class="p">:</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-96"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-96"><span class="linenos">96</span></a>            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-97"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-97"><span class="linenos">97</span></a>                <span class="s2">&quot;snapshot_ids must be a string (single ID) or a list of strings (multiple IDs).&quot;</span>
-</span><span id="PyTreeSnapshotManager.apply_leaf_transformation-98"><a href="#PyTreeSnapshotManager.apply_leaf_transformation-98"><span class="linenos">98</span></a>            <span class="p">)</span>
+    <a class="headerlink" href="#PyTreeSnapshotManager.update_leaf_nodes"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="PyTreeSnapshotManager.update_leaf_nodes-60"><a href="#PyTreeSnapshotManager.update_leaf_nodes-60"><span class="linenos">60</span></a>    <span class="k">def</span> <span class="nf">update_leaf_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">snapshot_ids</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-61"><a href="#PyTreeSnapshotManager.update_leaf_nodes-61"><span class="linenos">61</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-62"><a href="#PyTreeSnapshotManager.update_leaf_nodes-62"><span class="linenos">62</span></a><span class="sd">        Apply a transformation function to one or more snapshots&#39; PyTrees.</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-63"><a href="#PyTreeSnapshotManager.update_leaf_nodes-63"><span class="linenos">63</span></a>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-64"><a href="#PyTreeSnapshotManager.update_leaf_nodes-64"><span class="linenos">64</span></a><span class="sd">        Args:</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-65"><a href="#PyTreeSnapshotManager.update_leaf_nodes-65"><span class="linenos">65</span></a><span class="sd">            snapshot_ids (str or list): The ID(s) of the snapshot(s) to transform.</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-66"><a href="#PyTreeSnapshotManager.update_leaf_nodes-66"><span class="linenos">66</span></a><span class="sd">            func (callable): A function to apply to each leaf of the PyTree.</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-67"><a href="#PyTreeSnapshotManager.update_leaf_nodes-67"><span class="linenos">67</span></a>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-68"><a href="#PyTreeSnapshotManager.update_leaf_nodes-68"><span class="linenos">68</span></a><span class="sd">        Returns:</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-69"><a href="#PyTreeSnapshotManager.update_leaf_nodes-69"><span class="linenos">69</span></a><span class="sd">            Transformed PyTree or list of transformed PyTrees.</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-70"><a href="#PyTreeSnapshotManager.update_leaf_nodes-70"><span class="linenos">70</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-71"><a href="#PyTreeSnapshotManager.update_leaf_nodes-71"><span class="linenos">71</span></a>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-72"><a href="#PyTreeSnapshotManager.update_leaf_nodes-72"><span class="linenos">72</span></a>        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">snapshot_ids</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-73"><a href="#PyTreeSnapshotManager.update_leaf_nodes-73"><span class="linenos">73</span></a>            <span class="c1"># Single snapshot case</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-74"><a href="#PyTreeSnapshotManager.update_leaf_nodes-74"><span class="linenos">74</span></a>            <span class="n">snapshot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">get_snapshot</span><span class="p">(</span><span class="n">snapshot_ids</span><span class="p">)</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-75"><a href="#PyTreeSnapshotManager.update_leaf_nodes-75"><span class="linenos">75</span></a>            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">snapshot</span><span class="p">,</span> <span class="n">PyTreeSnapshot</span><span class="p">):</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-76"><a href="#PyTreeSnapshotManager.update_leaf_nodes-76"><span class="linenos">76</span></a>                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Snapshot is not a PyTreeSnapshot.&quot;</span><span class="p">)</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-77"><a href="#PyTreeSnapshotManager.update_leaf_nodes-77"><span class="linenos">77</span></a>            <span class="n">snapshot</span><span class="o">.</span><span class="n">update_leaf_nodes</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-78"><a href="#PyTreeSnapshotManager.update_leaf_nodes-78"><span class="linenos">78</span></a>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-79"><a href="#PyTreeSnapshotManager.update_leaf_nodes-79"><span class="linenos">79</span></a>        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">snapshot_ids</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-80"><a href="#PyTreeSnapshotManager.update_leaf_nodes-80"><span class="linenos">80</span></a>            <span class="c1"># Multiple snapshots case</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-81"><a href="#PyTreeSnapshotManager.update_leaf_nodes-81"><span class="linenos">81</span></a>            <span class="k">for</span> <span class="n">snapshot_id</span> <span class="ow">in</span> <span class="n">snapshot_ids</span><span class="p">:</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-82"><a href="#PyTreeSnapshotManager.update_leaf_nodes-82"><span class="linenos">82</span></a>                <span class="n">snapshot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">get_snapshot</span><span class="p">(</span><span class="n">snapshot_id</span><span class="p">)</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-83"><a href="#PyTreeSnapshotManager.update_leaf_nodes-83"><span class="linenos">83</span></a>                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">snapshot</span><span class="p">,</span> <span class="n">PyTreeSnapshot</span><span class="p">):</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-84"><a href="#PyTreeSnapshotManager.update_leaf_nodes-84"><span class="linenos">84</span></a>                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-85"><a href="#PyTreeSnapshotManager.update_leaf_nodes-85"><span class="linenos">85</span></a>                        <span class="sa">f</span><span class="s2">&quot;Snapshot with ID </span><span class="si">{</span><span class="n">snapshot_id</span><span class="si">}</span><span class="s2"> is not a PyTreeSnapshot.&quot;</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-86"><a href="#PyTreeSnapshotManager.update_leaf_nodes-86"><span class="linenos">86</span></a>                    <span class="p">)</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-87"><a href="#PyTreeSnapshotManager.update_leaf_nodes-87"><span class="linenos">87</span></a>                <span class="n">snapshot</span><span class="o">.</span><span class="n">update_leaf_nodes</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-88"><a href="#PyTreeSnapshotManager.update_leaf_nodes-88"><span class="linenos">88</span></a>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-89"><a href="#PyTreeSnapshotManager.update_leaf_nodes-89"><span class="linenos">89</span></a>        <span class="k">else</span><span class="p">:</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-90"><a href="#PyTreeSnapshotManager.update_leaf_nodes-90"><span class="linenos">90</span></a>            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-91"><a href="#PyTreeSnapshotManager.update_leaf_nodes-91"><span class="linenos">91</span></a>                <span class="s2">&quot;snapshot_ids must be a string (single ID) or a list of strings (multiple IDs).&quot;</span>
+</span><span id="PyTreeSnapshotManager.update_leaf_nodes-92"><a href="#PyTreeSnapshotManager.update_leaf_nodes-92"><span class="linenos">92</span></a>            <span class="p">)</span>
 </span></pre></div>
 
 
@@ -2491,12 +2500,52 @@ otherwise by their age (insertion order).</p>
 
 <p>Args:
     snapshot_ids (str or list): The ID(s) of the snapshot(s) to transform.
-    func (callable): A function to apply to each leaf of the PyTree.
-    deepcopy (bool): Whether to return a deep copy of the transformed PyTree(s).
-                    Defaults to the manager's deepcopy setting.</p>
+    func (callable): A function to apply to each leaf of the PyTree.</p>
 
 <p>Returns:
     Transformed PyTree or list of transformed PyTrees.</p>
+</div>
+
+
+                            </div>
+                            <div id="PyTreeSnapshotManager.update_all_leaf_nodes" class="classattr">
+                                        <input id="PyTreeSnapshotManager.update_all_leaf_nodes-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+<div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">update_all_leaf_nodes</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">func</span></span><span class="return-annotation">):</span></span>
+
+                <label class="view-source-button" for="PyTreeSnapshotManager.update_all_leaf_nodes-view-source"><span>View Source</span></label>
+
+    </div>
+    <a class="headerlink" href="#PyTreeSnapshotManager.update_all_leaf_nodes"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="PyTreeSnapshotManager.update_all_leaf_nodes-94"><a href="#PyTreeSnapshotManager.update_all_leaf_nodes-94"><span class="linenos"> 94</span></a>    <span class="k">def</span> <span class="nf">update_all_leaf_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+</span><span id="PyTreeSnapshotManager.update_all_leaf_nodes-95"><a href="#PyTreeSnapshotManager.update_all_leaf_nodes-95"><span class="linenos"> 95</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="PyTreeSnapshotManager.update_all_leaf_nodes-96"><a href="#PyTreeSnapshotManager.update_all_leaf_nodes-96"><span class="linenos"> 96</span></a><span class="sd">        Apply a transformation function to all snapshots&#39; PyTrees currently managed.</span>
+</span><span id="PyTreeSnapshotManager.update_all_leaf_nodes-97"><a href="#PyTreeSnapshotManager.update_all_leaf_nodes-97"><span class="linenos"> 97</span></a>
+</span><span id="PyTreeSnapshotManager.update_all_leaf_nodes-98"><a href="#PyTreeSnapshotManager.update_all_leaf_nodes-98"><span class="linenos"> 98</span></a><span class="sd">        Args:</span>
+</span><span id="PyTreeSnapshotManager.update_all_leaf_nodes-99"><a href="#PyTreeSnapshotManager.update_all_leaf_nodes-99"><span class="linenos"> 99</span></a><span class="sd">            func (callable): A function to apply to each leaf of all PyTrees.</span>
+</span><span id="PyTreeSnapshotManager.update_all_leaf_nodes-100"><a href="#PyTreeSnapshotManager.update_all_leaf_nodes-100"><span class="linenos">100</span></a>
+</span><span id="PyTreeSnapshotManager.update_all_leaf_nodes-101"><a href="#PyTreeSnapshotManager.update_all_leaf_nodes-101"><span class="linenos">101</span></a><span class="sd">        Raises:</span>
+</span><span id="PyTreeSnapshotManager.update_all_leaf_nodes-102"><a href="#PyTreeSnapshotManager.update_all_leaf_nodes-102"><span class="linenos">102</span></a><span class="sd">            TypeError: If any snapshot is not a PyTreeSnapshot.</span>
+</span><span id="PyTreeSnapshotManager.update_all_leaf_nodes-103"><a href="#PyTreeSnapshotManager.update_all_leaf_nodes-103"><span class="linenos">103</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="PyTreeSnapshotManager.update_all_leaf_nodes-104"><a href="#PyTreeSnapshotManager.update_all_leaf_nodes-104"><span class="linenos">104</span></a>        <span class="k">for</span> <span class="n">snapshot_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">snapshots</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+</span><span id="PyTreeSnapshotManager.update_all_leaf_nodes-105"><a href="#PyTreeSnapshotManager.update_all_leaf_nodes-105"><span class="linenos">105</span></a>            <span class="n">snapshot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="o">.</span><span class="n">get_snapshot</span><span class="p">(</span><span class="n">snapshot_id</span><span class="p">)</span>
+</span><span id="PyTreeSnapshotManager.update_all_leaf_nodes-106"><a href="#PyTreeSnapshotManager.update_all_leaf_nodes-106"><span class="linenos">106</span></a>            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">snapshot</span><span class="p">,</span> <span class="n">PyTreeSnapshot</span><span class="p">):</span>
+</span><span id="PyTreeSnapshotManager.update_all_leaf_nodes-107"><a href="#PyTreeSnapshotManager.update_all_leaf_nodes-107"><span class="linenos">107</span></a>                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+</span><span id="PyTreeSnapshotManager.update_all_leaf_nodes-108"><a href="#PyTreeSnapshotManager.update_all_leaf_nodes-108"><span class="linenos">108</span></a>                    <span class="sa">f</span><span class="s2">&quot;Snapshot with ID </span><span class="si">{</span><span class="n">snapshot_id</span><span class="si">}</span><span class="s2"> is not a PyTreeSnapshot.&quot;</span>
+</span><span id="PyTreeSnapshotManager.update_all_leaf_nodes-109"><a href="#PyTreeSnapshotManager.update_all_leaf_nodes-109"><span class="linenos">109</span></a>                <span class="p">)</span>
+</span><span id="PyTreeSnapshotManager.update_all_leaf_nodes-110"><a href="#PyTreeSnapshotManager.update_all_leaf_nodes-110"><span class="linenos">110</span></a>            <span class="n">snapshot</span><span class="o">.</span><span class="n">update_leaf_nodes</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+</span></pre></div>
+
+
+            <div class="docstring"><p>Apply a transformation function to all snapshots' PyTrees currently managed.</p>
+
+<p>Args:
+    func (callable): A function to apply to each leaf of all PyTrees.</p>
+
+<p>Raises:
+    TypeError: If any snapshot is not a PyTreeSnapshot.</p>
 </div>
 
 
@@ -2533,22 +2582,18 @@ otherwise by their age (insertion order).</p>
 </span><span id="PyTreeSnapshot-23"><a href="#PyTreeSnapshot-23"><span class="linenos">23</span></a><span class="sd">        Raises a ValueError if not valid.</span>
 </span><span id="PyTreeSnapshot-24"><a href="#PyTreeSnapshot-24"><span class="linenos">24</span></a><span class="sd">        &quot;&quot;&quot;</span>
 </span><span id="PyTreeSnapshot-25"><a href="#PyTreeSnapshot-25"><span class="linenos">25</span></a>        <span class="k">try</span><span class="p">:</span>
-</span><span id="PyTreeSnapshot-26"><a href="#PyTreeSnapshot-26"><span class="linenos">26</span></a>            <span class="n">tree_flatten</span><span class="p">(</span><span class="n">pytree</span><span class="p">)</span>
+</span><span id="PyTreeSnapshot-26"><a href="#PyTreeSnapshot-26"><span class="linenos">26</span></a>            <span class="n">jax</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">pytree</span><span class="p">)</span>
 </span><span id="PyTreeSnapshot-27"><a href="#PyTreeSnapshot-27"><span class="linenos">27</span></a>        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
 </span><span id="PyTreeSnapshot-28"><a href="#PyTreeSnapshot-28"><span class="linenos">28</span></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid PyTree: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span><span id="PyTreeSnapshot-29"><a href="#PyTreeSnapshot-29"><span class="linenos">29</span></a>
-</span><span id="PyTreeSnapshot-30"><a href="#PyTreeSnapshot-30"><span class="linenos">30</span></a>    <span class="k">def</span> <span class="nf">apply_leaf_transformation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+</span><span id="PyTreeSnapshot-30"><a href="#PyTreeSnapshot-30"><span class="linenos">30</span></a>    <span class="k">def</span> <span class="nf">update_leaf_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
 </span><span id="PyTreeSnapshot-31"><a href="#PyTreeSnapshot-31"><span class="linenos">31</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="PyTreeSnapshot-32"><a href="#PyTreeSnapshot-32"><span class="linenos">32</span></a><span class="sd">        Apply a transformation function to each leaf of the PyTree.</span>
 </span><span id="PyTreeSnapshot-33"><a href="#PyTreeSnapshot-33"><span class="linenos">33</span></a>
 </span><span id="PyTreeSnapshot-34"><a href="#PyTreeSnapshot-34"><span class="linenos">34</span></a><span class="sd">        Args:</span>
 </span><span id="PyTreeSnapshot-35"><a href="#PyTreeSnapshot-35"><span class="linenos">35</span></a><span class="sd">            func (callable): A function to apply to each leaf of the PyTree.</span>
-</span><span id="PyTreeSnapshot-36"><a href="#PyTreeSnapshot-36"><span class="linenos">36</span></a>
-</span><span id="PyTreeSnapshot-37"><a href="#PyTreeSnapshot-37"><span class="linenos">37</span></a><span class="sd">        Returns:</span>
-</span><span id="PyTreeSnapshot-38"><a href="#PyTreeSnapshot-38"><span class="linenos">38</span></a><span class="sd">            A new PyTree with the transformation applied.</span>
-</span><span id="PyTreeSnapshot-39"><a href="#PyTreeSnapshot-39"><span class="linenos">39</span></a><span class="sd">        &quot;&quot;&quot;</span>
-</span><span id="PyTreeSnapshot-40"><a href="#PyTreeSnapshot-40"><span class="linenos">40</span></a>        <span class="n">pytree</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="n">deepcopy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-</span><span id="PyTreeSnapshot-41"><a href="#PyTreeSnapshot-41"><span class="linenos">41</span></a>        <span class="k">return</span> <span class="n">tree_map</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">pytree</span><span class="p">)</span>
+</span><span id="PyTreeSnapshot-36"><a href="#PyTreeSnapshot-36"><span class="linenos">36</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="PyTreeSnapshot-37"><a href="#PyTreeSnapshot-37"><span class="linenos">37</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
 </span></pre></div>
 
 
@@ -2607,7 +2652,7 @@ otherwise by their age (insertion order).</p>
 </span><span id="PyTreeSnapshot.validate_pytree-23"><a href="#PyTreeSnapshot.validate_pytree-23"><span class="linenos">23</span></a><span class="sd">        Raises a ValueError if not valid.</span>
 </span><span id="PyTreeSnapshot.validate_pytree-24"><a href="#PyTreeSnapshot.validate_pytree-24"><span class="linenos">24</span></a><span class="sd">        &quot;&quot;&quot;</span>
 </span><span id="PyTreeSnapshot.validate_pytree-25"><a href="#PyTreeSnapshot.validate_pytree-25"><span class="linenos">25</span></a>        <span class="k">try</span><span class="p">:</span>
-</span><span id="PyTreeSnapshot.validate_pytree-26"><a href="#PyTreeSnapshot.validate_pytree-26"><span class="linenos">26</span></a>            <span class="n">tree_flatten</span><span class="p">(</span><span class="n">pytree</span><span class="p">)</span>
+</span><span id="PyTreeSnapshot.validate_pytree-26"><a href="#PyTreeSnapshot.validate_pytree-26"><span class="linenos">26</span></a>            <span class="n">jax</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">pytree</span><span class="p">)</span>
 </span><span id="PyTreeSnapshot.validate_pytree-27"><a href="#PyTreeSnapshot.validate_pytree-27"><span class="linenos">27</span></a>        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
 </span><span id="PyTreeSnapshot.validate_pytree-28"><a href="#PyTreeSnapshot.validate_pytree-28"><span class="linenos">28</span></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid PyTree: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span></pre></div>
@@ -2619,29 +2664,25 @@ Raises a ValueError if not valid.</p>
 
 
                             </div>
-                            <div id="PyTreeSnapshot.apply_leaf_transformation" class="classattr">
-                                        <input id="PyTreeSnapshot.apply_leaf_transformation-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+                            <div id="PyTreeSnapshot.update_leaf_nodes" class="classattr">
+                                        <input id="PyTreeSnapshot.update_leaf_nodes-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">apply_leaf_transformation</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">func</span></span><span class="return-annotation">):</span></span>
+        <span class="name">update_leaf_nodes</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">func</span></span><span class="return-annotation">):</span></span>
 
-                <label class="view-source-button" for="PyTreeSnapshot.apply_leaf_transformation-view-source"><span>View Source</span></label>
+                <label class="view-source-button" for="PyTreeSnapshot.update_leaf_nodes-view-source"><span>View Source</span></label>
 
     </div>
-    <a class="headerlink" href="#PyTreeSnapshot.apply_leaf_transformation"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="PyTreeSnapshot.apply_leaf_transformation-30"><a href="#PyTreeSnapshot.apply_leaf_transformation-30"><span class="linenos">30</span></a>    <span class="k">def</span> <span class="nf">apply_leaf_transformation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
-</span><span id="PyTreeSnapshot.apply_leaf_transformation-31"><a href="#PyTreeSnapshot.apply_leaf_transformation-31"><span class="linenos">31</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="PyTreeSnapshot.apply_leaf_transformation-32"><a href="#PyTreeSnapshot.apply_leaf_transformation-32"><span class="linenos">32</span></a><span class="sd">        Apply a transformation function to each leaf of the PyTree.</span>
-</span><span id="PyTreeSnapshot.apply_leaf_transformation-33"><a href="#PyTreeSnapshot.apply_leaf_transformation-33"><span class="linenos">33</span></a>
-</span><span id="PyTreeSnapshot.apply_leaf_transformation-34"><a href="#PyTreeSnapshot.apply_leaf_transformation-34"><span class="linenos">34</span></a><span class="sd">        Args:</span>
-</span><span id="PyTreeSnapshot.apply_leaf_transformation-35"><a href="#PyTreeSnapshot.apply_leaf_transformation-35"><span class="linenos">35</span></a><span class="sd">            func (callable): A function to apply to each leaf of the PyTree.</span>
-</span><span id="PyTreeSnapshot.apply_leaf_transformation-36"><a href="#PyTreeSnapshot.apply_leaf_transformation-36"><span class="linenos">36</span></a>
-</span><span id="PyTreeSnapshot.apply_leaf_transformation-37"><a href="#PyTreeSnapshot.apply_leaf_transformation-37"><span class="linenos">37</span></a><span class="sd">        Returns:</span>
-</span><span id="PyTreeSnapshot.apply_leaf_transformation-38"><a href="#PyTreeSnapshot.apply_leaf_transformation-38"><span class="linenos">38</span></a><span class="sd">            A new PyTree with the transformation applied.</span>
-</span><span id="PyTreeSnapshot.apply_leaf_transformation-39"><a href="#PyTreeSnapshot.apply_leaf_transformation-39"><span class="linenos">39</span></a><span class="sd">        &quot;&quot;&quot;</span>
-</span><span id="PyTreeSnapshot.apply_leaf_transformation-40"><a href="#PyTreeSnapshot.apply_leaf_transformation-40"><span class="linenos">40</span></a>        <span class="n">pytree</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="n">deepcopy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-</span><span id="PyTreeSnapshot.apply_leaf_transformation-41"><a href="#PyTreeSnapshot.apply_leaf_transformation-41"><span class="linenos">41</span></a>        <span class="k">return</span> <span class="n">tree_map</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">pytree</span><span class="p">)</span>
+    <a class="headerlink" href="#PyTreeSnapshot.update_leaf_nodes"></a>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="PyTreeSnapshot.update_leaf_nodes-30"><a href="#PyTreeSnapshot.update_leaf_nodes-30"><span class="linenos">30</span></a>    <span class="k">def</span> <span class="nf">update_leaf_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+</span><span id="PyTreeSnapshot.update_leaf_nodes-31"><a href="#PyTreeSnapshot.update_leaf_nodes-31"><span class="linenos">31</span></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="PyTreeSnapshot.update_leaf_nodes-32"><a href="#PyTreeSnapshot.update_leaf_nodes-32"><span class="linenos">32</span></a><span class="sd">        Apply a transformation function to each leaf of the PyTree.</span>
+</span><span id="PyTreeSnapshot.update_leaf_nodes-33"><a href="#PyTreeSnapshot.update_leaf_nodes-33"><span class="linenos">33</span></a>
+</span><span id="PyTreeSnapshot.update_leaf_nodes-34"><a href="#PyTreeSnapshot.update_leaf_nodes-34"><span class="linenos">34</span></a><span class="sd">        Args:</span>
+</span><span id="PyTreeSnapshot.update_leaf_nodes-35"><a href="#PyTreeSnapshot.update_leaf_nodes-35"><span class="linenos">35</span></a><span class="sd">            func (callable): A function to apply to each leaf of the PyTree.</span>
+</span><span id="PyTreeSnapshot.update_leaf_nodes-36"><a href="#PyTreeSnapshot.update_leaf_nodes-36"><span class="linenos">36</span></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="PyTreeSnapshot.update_leaf_nodes-37"><a href="#PyTreeSnapshot.update_leaf_nodes-37"><span class="linenos">37</span></a>        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
 </span></pre></div>
 
 
@@ -2649,9 +2690,6 @@ Raises a ValueError if not valid.</p>
 
 <p>Args:
     func (callable): A function to apply to each leaf of the PyTree.</p>
-
-<p>Returns:
-    A new PyTree with the transformation applied.</p>
 </div>
 
 

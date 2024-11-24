@@ -51,47 +51,59 @@ class PyTreeSnapshotManager(SnapshotManager):
             str: The ID of the saved snapshot.
         """
         snapshot_id = snapshot_id or str(uuid.uuid4())
-    
+
         snapshot = PyTreeSnapshot(pytree, metadata, tags)
         self.storage.add_snapshot(snapshot_id, snapshot, overwrite=overwrite)
         return snapshot_id
 
-    def apply_leaf_transformation(self, snapshot_ids, func, deepcopy=DEFAULT):
+    def update_leaf_nodes(self, snapshot_ids, func):
         """
         Apply a transformation function to one or more snapshots' PyTrees.
 
         Args:
             snapshot_ids (str or list): The ID(s) of the snapshot(s) to transform.
             func (callable): A function to apply to each leaf of the PyTree.
-            deepcopy (bool): Whether to return a deep copy of the transformed PyTree(s).
-                            Defaults to the manager's deepcopy setting.
 
         Returns:
             Transformed PyTree or list of transformed PyTrees.
         """
-        # Resolve DEFAULT to the manager's deepcopy setting
-        deepcopy = self.deepcopy_on_retrieve if deepcopy is DEFAULT else deepcopy
 
         if isinstance(snapshot_ids, str):
             # Single snapshot case
-            snapshot = self.storage.get_snapshot(snapshot_ids, deepcopy=deepcopy)
+            snapshot = self.storage.get_snapshot(snapshot_ids)
             if not isinstance(snapshot, PyTreeSnapshot):
                 raise TypeError("Snapshot is not a PyTreeSnapshot.")
-            return snapshot.apply_leaf_transformation(func)
+            snapshot.update_leaf_nodes(func)
 
         elif isinstance(snapshot_ids, list):
             # Multiple snapshots case
-            transformed_pytree_list = []
             for snapshot_id in snapshot_ids:
-                snapshot = self.storage.get_snapshot(snapshot_id, deepcopy=deepcopy)
+                snapshot = self.storage.get_snapshot(snapshot_id)
                 if not isinstance(snapshot, PyTreeSnapshot):
                     raise TypeError(
                         f"Snapshot with ID {snapshot_id} is not a PyTreeSnapshot."
                     )
-                transformed_pytree_list.append(snapshot.apply_leaf_transformation(func))
-            return transformed_pytree_list
+                snapshot.update_leaf_nodes(func)
 
         else:
             raise TypeError(
                 "snapshot_ids must be a string (single ID) or a list of strings (multiple IDs)."
             )
+
+    def update_all_leaf_nodes(self, func):
+        """
+        Apply a transformation function to all snapshots' PyTrees currently managed.
+
+        Args:
+            func (callable): A function to apply to each leaf of all PyTrees.
+
+        Raises:
+            TypeError: If any snapshot is not a PyTreeSnapshot.
+        """
+        for snapshot_id in self.storage.snapshots.keys():
+            snapshot = self.storage.get_snapshot(snapshot_id)
+            if not isinstance(snapshot, PyTreeSnapshot):
+                raise TypeError(
+                    f"Snapshot with ID {snapshot_id} is not a PyTreeSnapshot."
+                )
+            snapshot.update_leaf_nodes(func)
