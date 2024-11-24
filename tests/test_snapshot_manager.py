@@ -18,7 +18,6 @@ def setup_manager():
     return SnapshotManager(max_snapshots=5)
 
 
-
 def test_save_and_retrieve_snapshot(setup_manager):
     """Test saving and retrieving a snapshot."""
     manager = setup_manager  # Fixture provides a SnapshotManager instance
@@ -514,3 +513,35 @@ def test_inplace_leaf_transformation(setup_manager):
     assert (
         snapshot2["c"] == 6 and snapshot2["d"]["y"] == 8
     ), "Snapshot2 not transformed correctly."
+
+
+def test_combine_snapshots_average(setup_manager):
+    """Test combining snapshots using an average function."""
+    manager = PyTreeSnapshotManager()
+
+    # Save snapshots with PyTree structures
+    snapshot1 = {"layer1": jnp.array([1.0, 2.0]), "layer2": jnp.array([3.0])}
+    snapshot2 = {"layer1": jnp.array([4.0, 5.0]), "layer2": jnp.array([6.0])}
+    snapshot3 = {"layer1": jnp.array([7.0, 8.0]), "layer2": jnp.array([9.0])}
+
+    manager.save_snapshot(snapshot1, snapshot_id="snap1")
+    manager.save_snapshot(snapshot2, snapshot_id="snap2")
+    manager.save_snapshot(snapshot3, snapshot_id="snap3")
+
+    # Combine snapshots with an average function
+    def average_leaves(leaves):
+        return sum(leaves) / len(leaves)
+
+    combined_pytree = manager.combine_snapshots(
+        snapshot_ids=["snap1", "snap2", "snap3"], combine_fn=average_leaves
+    )
+
+    # Verify the combined PyTree
+    # Expected result
+    expected_pytree = {"layer1": jnp.array([4.0, 5.0]), "layer2": jnp.array([6.0])}
+
+    # Verify the combined PyTree
+    for key in combined_pytree.keys():
+        assert jnp.array_equal(
+            combined_pytree[key], expected_pytree[key]
+        ), f"Mismatch for key {key}: {combined_pytree[key]} != {expected_pytree[key]}"

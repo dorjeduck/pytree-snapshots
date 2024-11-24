@@ -101,14 +101,20 @@ class SnapshotManager:
 
 
         Returns:
-            str: The ID of the saved snapshot.
+            str or bool: The ID of the saved snapshot if successfully added, otherwise False.
         """
         snapshot_id = snapshot_id or str(uuid.uuid4())
 
         deepcopy = deepcopy if deepcopy is not DEFAULT else self.deepcopy_on_save
 
         snapshot = Snapshot(data, metadata, tags, deepcopy=deepcopy)
-        self.storage.add_snapshot(snapshot_id, snapshot, overwrite=overwrite)
+
+        added = self.storage.add_snapshot(snapshot_id, snapshot, overwrite=overwrite)
+
+        if not added:
+            # Snapshot was not added due to space limit and comparison logic
+            return False
+
         return snapshot_id
 
     def get_snapshot(self, snapshot_id, deepcopy=DEFAULT):

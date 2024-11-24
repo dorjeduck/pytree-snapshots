@@ -1,6 +1,3 @@
-
-
-
 class SnapshotStorage:
     def __init__(self, max_snapshots=None, cmp_function=None):
         """
@@ -68,7 +65,7 @@ class SnapshotStorage:
             snapshot_id (str): The ID of the snapshot.
             snapshot (Snapshot): The Snapshot object to store.
             overwrite (bool): Whether to overwrite an existing snapshot. Defaults to False.
-           
+
         Raises:
             ValueError: If the snapshot ID already exists and `overwrite` is False.
         """
@@ -151,3 +148,15 @@ class SnapshotStorage:
                 self._remove_ranked(snapshot_id)
             return True
         return False
+
+    def has_snapshot(self, snapshot_id):
+        """
+        Check if a snapshot exists in storage.
+
+        Args:
+            snapshot_id (str): The ID of the snapshot to check.
+
+        Returns:
+            bool: True if the snapshot exists, False otherwise.
+        """
+        return snapshot_id in self.snapshots

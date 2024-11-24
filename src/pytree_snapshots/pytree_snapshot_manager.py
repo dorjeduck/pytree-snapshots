@@ -1,4 +1,5 @@
 import uuid
+import jax
 
 from .snapshot_manager import SnapshotManager
 from .pytree_snapshot import PyTreeSnapshot
@@ -107,3 +108,44 @@ class PyTreeSnapshotManager(SnapshotManager):
                     f"Snapshot with ID {snapshot_id} is not a PyTreeSnapshot."
                 )
             snapshot.update_leaf_nodes(func)
+
+    def combine_snapshots(self, snapshot_ids=None, combine_fn=None):
+        """
+        Combine multiple snapshots into a single PyTree using a custom function.
+
+        Args:
+            snapshot_ids (list, optional): IDs of the snapshots to combine.
+                                           If None, combine all snapshots.
+            combine_fn (callable): A function that takes a list of leaves (one from each snapshot)
+                                   and returns a single combined leaf.
+
+        Returns:
+            Combined PyTree with the same structure as the snapshots.
+
+        Raises:
+            TypeError: If snapshots are not PyTreeSnapshots or structures do not match.
+            ValueError: If combine_fn is not provided.
+        """
+        if combine_fn is None:
+            raise ValueError("A combine_fn must be provided to combine snapshots.")
+
+        # Select snapshots to combine
+        snapshot_ids = snapshot_ids or self.storage.snapshot_order
+        pytree_list = [
+            self.storage.get_snapshot(snapshot_id).data
+            for snapshot_id in snapshot_ids
+        ]
+
+        # Ensure all PyTrees have the same structure
+        flattened, structure = zip(
+            *[jax.tree.flatten(pytree) for pytree in pytree_list]
+        )
+        if not all(structure[0] == s for s in structure):
+            raise TypeError("All snapshots must have the same PyTree structure.")
+
+        # Apply the combine function to each set of corresponding leaves
+        combined_leaves = [combine_fn(leaves) for leaves in zip(*flattened)]
+
+        # Reconstruct the combined PyTree
+        combined_pytree = jax.tree.unflatten(structure[0], combined_leaves)
+        return combined_pytree
