@@ -15,7 +15,8 @@ class SnapshotManager:
 
     def __init__(
         self,
-        deepcopy=True,
+        deepcopy_on_save=True,
+        deepcopy_on_retrieve=True,
         query_class=None,
         max_snapshots=None,
         cmp_function=None,
@@ -24,7 +25,8 @@ class SnapshotManager:
         Initialize the SnapshotManager.
 
         Args:
-            deepcopy (bool): Whether to return deep copies of PyTrees by default. Defaults to True.
+            deepcopy_on_save (bool): Whether to deepcopy PyTrees when saving snapshots. Defaults to True.
+            deepcopy_on_retrieve (bool): Whether to return deep copies of PyTrees when retrieving snapshots. Defaults to True.
             query_class (type, optional): A class implementing SnapshotQueryInterface. Defaults to SnapshotQuery.
             max_snapshots (int, optional): Maximum number of snapshots to store. Defaults to None (no limit).
             cmp_function (callable, optional): A comparison function to order snapshots, also used to decide which snapshot to remove
@@ -37,7 +39,8 @@ class SnapshotManager:
             max_snapshots=max_snapshots, cmp_function=cmp_function
         )
         self.query = (query_class or SnapshotQuery)(self.storage.snapshots)
-        self.deepcopy = deepcopy
+        self.deepcopy_on_save = deepcopy_on_save
+        self.deepcopy_on_retrieve = deepcopy_on_retrieve
 
     def __getitem__(self, index, deepcopy=DEFAULT):
         """
@@ -72,7 +75,7 @@ class SnapshotManager:
         # Retrieve the snapshot and return its PyTree
         snapshot = self.storage.get_snapshot(snapshot_id)
 
-        return snapshot.get_data(self._should_deepcopy(deepcopy))
+        return snapshot.get_data(self._should_deepcopy_on_retrieve(deepcopy))
 
     # Save, Retrieve, and Delete PytreeSnapshots
 
@@ -83,6 +86,7 @@ class SnapshotManager:
         metadata=None,
         tags=None,
         overwrite=False,
+        deepcopy=DEFAULT,
     ):
         """
         Save a new Snapshot or overwrite an existing one.
@@ -93,16 +97,21 @@ class SnapshotManager:
             metadata (dict, optional): Metadata to associate with the snapshot.
             tags (list, optional): Tags to associate with the snapshot.
             overwrite (bool): Whether to overwrite an existing snapshot.
+            deepcopy (bool, optional): Whether to override the default deepcopy_on_save setting.
+
 
         Returns:
             str: The ID of the saved snapshot.
         """
         snapshot_id = snapshot_id or str(uuid.uuid4())
-        snapshot = Snapshot(pytree, metadata, tags)
+
+        deepcopy = deepcopy if deepcopy is not DEFAULT else self.deepcopy_on_save
+
+        snapshot = Snapshot(pytree, metadata, tags, deepcopy=deepcopy)
         self.storage.add_snapshot(snapshot_id, snapshot, overwrite=overwrite)
         return snapshot_id
 
-    def get_snapshot(self, snapshot_id, deepcopy=None):
+    def get_snapshot(self, snapshot_id, deepcopy=DEFAULT):
         """
         Retrieve the PyTree from a Snapshot.
 
@@ -117,7 +126,7 @@ class SnapshotManager:
             ValueError: If the snapshot ID does not exist.
         """
         snapshot = self.storage.get_snapshot(snapshot_id)
-        return snapshot.get_data(self._should_deepcopy(deepcopy))
+        return snapshot.get_data(self._should_deepcopy_on_retrieve(deepcopy))
 
     def get_latest_snapshot(self, deepcopy=DEFAULT):
         """
@@ -135,7 +144,7 @@ class SnapshotManager:
         # Use storage to get the latest snapshot
         snapshot_id = self.storage.snapshot_order[0]
         snapshot = self.storage.get_snapshot(snapshot_id)
-        return snapshot.get_data(self._should_deepcopy(deepcopy))
+        return snapshot.get_data(self._should_deepcopy_on_retrieve(deepcopy))
 
     def get_ranked_snapshots(self):
         """
@@ -369,7 +378,7 @@ class SnapshotManager:
         # Get the oldest snapshot ID from the storage
         snapshot_id = self.storage.snapshot_order[0]
         snapshot = self.storage.get_snapshot(snapshot_id)
-        return snapshot.get_data(self._should_deepcopy(deepcopy))
+        return snapshot.get_data(self._should_deepcopy_on_retrieve(deepcopy))
 
     def list_snapshots_by_age(self, ascending=True):
         """
@@ -411,7 +420,7 @@ class SnapshotManager:
 
         Args:
             file_path (str): Path to the file containing the saved state.
-           
+
         Returns:
             SnapshotManager: A new manager instance with the loaded state.
         """
@@ -432,5 +441,5 @@ class SnapshotManager:
 
     # private
 
-    def _should_deepcopy(self, deepcopy):
-        return deepcopy if deepcopy is not DEFAULT else self.deepcopy
+    def _should_deepcopy_on_retrieve(self, deepcopy):
+        return deepcopy if deepcopy is not DEFAULT else self.deepcopy_on_retrieve

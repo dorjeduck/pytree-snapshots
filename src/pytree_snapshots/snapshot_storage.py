@@ -61,14 +61,15 @@ class SnapshotStorage:
             return self.ranked_snapshot_order.copy()
         return self.snapshot_order.copy()
 
-    def add_snapshot(self, snapshot_id, pytree_snapshot, overwrite=False):
+    def add_snapshot(self, snapshot_id, snapshot, overwrite=False):
         """
         Adds a snapshot to storage, optionally overwriting an existing one.
 
         Args:
             snapshot_id (str): The ID of the snapshot.
-            pytree_snapshot (Snapshot): The Snapshot object to store.
+            snapshot (Snapshot): The Snapshot object to store.
             overwrite (bool): Whether to overwrite an existing snapshot. Defaults to False.
+            deepcopy (bool): Whether to store a deep copy of the snapshot. Defaults to True.
 
         Raises:
             ValueError: If the snapshot ID already exists and `overwrite` is False.
@@ -79,7 +80,7 @@ class SnapshotStorage:
                     f"Snapshot ID '{snapshot_id}' already exists. Use overwrite=True to update it."
                 )
             # Overwrite existing snapshot
-            self.snapshots[snapshot_id] = pytree_snapshot
+            self.snapshots[snapshot_id] = snapshot
             self._remove_ranked(snapshot_id)
             self._insert_ranked(snapshot_id)
 
@@ -101,7 +102,7 @@ class SnapshotStorage:
                 # Compare the new snapshot to the lowest-ranked snapshot
                 if (
                     self.cmp_function
-                    and self.cmp_function(pytree_snapshot, lowest_snapshot) > 0
+                    and self.cmp_function(snapshot, lowest_snapshot) > 0
                 ):
                     # New snapshot is better; remove the lowest one
                     self.remove_snapshot(lowest_snapshot_id)
@@ -113,7 +114,7 @@ class SnapshotStorage:
                     return False
 
             # Add the new snapshot
-            self.snapshots[snapshot_id] = pytree_snapshot
+            self.snapshots[snapshot_id] = snapshot
             self.snapshot_order.append(snapshot_id)
             if self.cmp_function:
                 self._insert_ranked(snapshot_id)

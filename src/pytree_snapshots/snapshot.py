@@ -5,7 +5,7 @@ import copy
 
 
 class Snapshot:
-    def __init__(self, data, metadata=None, tags=None):
+    def __init__(self, data, metadata=None, tags=None, deepcopy=True):
         """
         Initialize a Snapshot instance.
 
@@ -13,23 +13,21 @@ class Snapshot:
             data: The data structure to store in the snapshot.
             metadata (dict, optional): User-defined metadata.
             tags (list, optional): Tags associated with the snapshot.
+            deepcopy (bool, optional): Whether to deepcopy the data when saving.
+
 
         """
         self.timestamp = time.time()
         self.metadata = metadata or {}
         self.tags = list(tags or [])
-        self.compress = False  # disabled as option for now
-
-        # Store the data, compressing it if needed
-        self.data = self._compress(data) if self.compress else data
+        self.data = copy.deepcopy(data) if deepcopy else data
 
     def to_dict(self):
         """Convert the snapshot to a dictionary for serialization."""
         return {
-            "data": self._decompress() if self.compress else self.data,
+            "data": self.data,
             "metadata": self.metadata,
             "tags": self.tags,
-            "compress": self.compress,
             "timestamp": self.timestamp,
         }
 
@@ -42,23 +40,9 @@ class Snapshot:
             tags=data.get("tags"),
         )
 
-    def _compress(self, data):
-        try:
-            return zlib.compress(pickle.dumps(data))
-        except Exception as e:
-            raise RuntimeError("Compression failed") from e
-
-    def _decompress(self):
-        try:
-            return (
-                pickle.loads(zlib.decompress(self.data)) if self.compress else self.data
-            )
-        except Exception as e:
-            raise RuntimeError("Decompression failed") from e
-
     def get_data(self, deepcopy=True):
         """
-        Retrieve the stored data, decompressing if needed.
+        Retrieve the stored data.
 
         Args:
             deepcopy (bool, optional): Whether to return a deep copy.
@@ -66,8 +50,7 @@ class Snapshot:
         Returns:
             The stored data.
         """
-        data = self._decompress() if self.compress else self.data
-        return copy.deepcopy(data) if deepcopy else data
+        return copy.deepcopy(self.data) if deepcopy else self.data
 
     def add_tags(self, tags):
         """

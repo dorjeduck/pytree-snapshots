@@ -163,6 +163,6 @@ cython_debug/
 
 .DS_Store
 use_cases/MNIST
-x.py
+x*.py
 
 

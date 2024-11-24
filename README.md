@@ -10,7 +10,7 @@ A lightweight and flexible manager for capturing and managing data snapshots in 
 - **General-Purpose Compatibility**: Works seamlessly with any Python object.
 - **Metadata and Tagging**: Organize snapshots with metadata and tags for better discoverability.
 - **Advanced Query Support**: Perform complex searches using metadata, tags, time ranges, or custom criteria.
-- **Deepcopy and Compression Options**: Fine-tune storage and retrieval behavior to balance performance and memory usage.
+- **Deepcopy**: Fine-tune storage and retrieval behavior to balance performance and memory usage.
 - **Designed for PyTrees**: Includes specialized features for JAX PyTrees, such as validation, transformations and PyTree-specific queries. (more to come)
 
 ## Installation
@@ -118,7 +118,7 @@ Explore the [examples](./examples) folder for a random collection of demos showc
 
 ## Deepcopy Logic in SnapshotManager
 
-The `SnapshotManager` uses the `deepcopy` parameter to control whether snapshots are returned as deep copies or as references to the original PyTree.
+The `SnapshotManager` offers flexible control over `deepcopy` behavior with separate options for saving and retrieving snapshots. This ensures both data safety and performance optimization based on your use case.
 
 ### What is Deepcopy?
 
@@ -128,23 +128,45 @@ In contrast, a **shallow copy** or direct reference means changes to the retriev
 
 ### Default Behavior
 
-By default, snapshots are returned as deep copies, ensuring that modifications to the retrieved PyTree do not affect the stored snapshot.
+By default:
 
-You can override this behavior globally when initializing the SnapshotManager.
+- Saving Snapshots: Deepcopy is enabled to ensure that the saved snapshot remains isolated from modifications to the original PyTree.
+
+- Retrieving Snapshots: Deepcopy is also enabled to ensure the retrieved PyTree is independent of the stored snapshot.
+
+This behavior provides maximum data safety but may introduce performance overhead.
+
+You can customize the default deepcopy behavior during initialization of the SnapshotManager:
 
 ```python
-manager = SnapshotManager(deepcopy=False)
+from pytree_snapshots import SnapshotManager
+
+# Disable deepcopy globally for saving and retrieving
+manager = SnapshotManager(deepcopy_on_save=False, deepcopy_on_retrieve=False)
 ```
 
-### Overriding Deepcopy Per Retrieval
+### Overriding Deepcopy Setting Per Operation
 
-The SnapshotManager allows you to override the initial deepcopy setting for individual snapshot retrievals. This is useful when you want a specific snapshot retrieval to behave differently from the default setting.
+#### Save Operation
+
+You can override the global deepcopy_on_save setting for individual save operations by using the deepcopy parameter:
+
+```python
+snapshot_id = manager.save_snapshot(
+    {"a": 1, "b": [2, 3]},
+    deepcopy=False  # Overrides the global setting
+)
+```
+
+#### Retrieve Operation
+
+Similarly, the global deepcopy_on_retrieve setting can be overridden during individual retrievals:
 
 ```python
 from pytree_snapshots import SnapshotManager
 
 # Initialize the manager
-manager = SnapshotManager(deepcopy=True)  # Default behavior is deepcopy enabled
+manager = SnapshotManager(deepcopy_on_retrieve=True)  # Default behavior is deepcopy enabled
 
 # Save a snapshot
 snapshot_id = manager.save_snapshot({"a": 1, "b": [2, 3]})
@@ -160,6 +182,19 @@ stored_snapshot = manager.get_snapshot(snapshot_id)
 assert stored_snapshot["b"] == [2, 3, 4], "Deepcopy override failed: Original snapshot was not updated."
 ```
 
+The deepcopy logic used in get_snapshot also applies to other retrieval methods:
+
+```python
+# Retrieve the latest snapshot without deep copying
+latest_snapshot = manager.get_latest_snapshot(deepcopy=False)
+
+# Retrieve the oldest snapshot with deep copying
+oldest_snapshot = manager.get_oldest_snapshot(deepcopy=True)
+
+# Retrieve a snapshot by index
+snapshot_by_index = manager[0, deepcopy=False]  # Overrides the default
+```
+
 ## Roadmap
 
 - Expanding PyTree-specific functionality to enhance JAX integration.
@@ -171,6 +206,8 @@ We warmly welcome contributions and look forward to your pull requests!
 
 ## Changelog
 
+- 2024.11.24
+  - Deepcopy on Save 
 - 2024.11.23
   - Refactored
   - Logic Queries
