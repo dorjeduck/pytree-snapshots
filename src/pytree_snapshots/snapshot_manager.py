@@ -10,7 +10,7 @@ from pytree_snapshots.constants import DEFAULT
 
 class SnapshotManager:
     """
-    A manager for storing and managing PyTree snapshots.
+    A manager for storing and managing data snapshots.
     """
 
     def __init__(
@@ -50,10 +50,10 @@ class SnapshotManager:
             index (int or str):
                 - If an integer, retrieves the Snapshot by its position in the order of creation.
                 - If a string, retrieves the Snapshot by its ID.
-            deepcopy (bool, optional): Whether to return a deep copy of the Snapshot's PyTree. Defaults to the manager's deepcopy setting.
+            deepcopy (bool, optional): Whether to return a deep copy of the Snapshot's data. Defaults to the manager's deepcopy setting.
 
         Returns:
-            The PyTree of the Snapshot.
+            The data of the Snapshot.
 
         Raises:
             ValueError: If the index or ID is invalid.
@@ -72,7 +72,7 @@ class SnapshotManager:
         else:
             raise ValueError(f"Invalid index type: {type(index)}. Must be int or str.")
 
-        # Retrieve the snapshot and return its PyTree
+        # Retrieve the snapshot and return its data
         snapshot = self.storage.get_snapshot(snapshot_id)
 
         return snapshot.get_data(self._should_deepcopy_on_retrieve(deepcopy))
@@ -81,7 +81,7 @@ class SnapshotManager:
 
     def save_snapshot(
         self,
-        pytree,
+        data,
         snapshot_id=None,
         metadata=None,
         tags=None,
@@ -92,7 +92,7 @@ class SnapshotManager:
         Save a new Snapshot or overwrite an existing one.
 
         Args:
-            pytree: The PyTree to store in the Snapshot.
+            data: The data to store in the Snapshot.
             snapshot_id (str, optional): Identifier for the Snapshot. A unique ID is generated if not provided.
             metadata (dict, optional): Metadata to associate with the snapshot.
             tags (list, optional): Tags to associate with the snapshot.
@@ -107,24 +107,25 @@ class SnapshotManager:
 
         deepcopy = deepcopy if deepcopy is not DEFAULT else self.deepcopy_on_save
 
-        snapshot = Snapshot(pytree, metadata, tags, deepcopy=deepcopy)
+        snapshot = Snapshot(data, metadata, tags, deepcopy=deepcopy)
         self.storage.add_snapshot(snapshot_id, snapshot, overwrite=overwrite)
         return snapshot_id
 
     def get_snapshot(self, snapshot_id, deepcopy=DEFAULT):
         """
-        Retrieve the PyTree from a Snapshot.
+        Retrieve the data from a Snapshot.
 
         Args:
             snapshot_id (str): The ID of the snapshot to retrieve.
-            deepcopy (bool, optional): Whether to return a deep copy of the snapshot's PyTree.
+            deepcopy (bool, optional): Whether to return a deep copy of the snapshot's data.
 
         Returns:
-            The PyTree stored in the snapshot.
+            The data stored in the snapshot.
 
         Raises:
             ValueError: If the snapshot ID does not exist.
         """
+
         snapshot = self.storage.get_snapshot(snapshot_id)
         return snapshot.get_data(self._should_deepcopy_on_retrieve(deepcopy))
 
@@ -136,7 +137,7 @@ class SnapshotManager:
             deepcopy (bool, optional): Whether to return a deep copy.
 
         Returns:
-            The PyTree of the most recent snapshot.
+            The data of the most recent snapshot.
 
         Raises:
             IndexError: If no snapshots are available.
@@ -189,7 +190,7 @@ class SnapshotManager:
         """
         original_snapshot = self.storage.get_snapshot(snapshot_id)
 
-        # Create a deep copy of the original PyTree
+        # Create a deep copy of the original data
         cloned_pytree = original_snapshot.get_data(True)
 
         # Merge metadata (if provided) with the original snapshot's metadata
@@ -244,7 +245,7 @@ class SnapshotManager:
         if not isinstance(new_metadata, dict):
             raise TypeError("new_metadata must be a dictionary.")
 
-        snapshot = self.storage.get_snapshot(snapshot_id, False)
+        snapshot = self.storage.get_snapshot(snapshot_id)
         snapshot.metadata.update(new_metadata)
 
     # Tag Management
@@ -263,7 +264,7 @@ class SnapshotManager:
         if not isinstance(tags, list):
             raise TypeError("tags must be a list.")
 
-        snapshot = self.storage.get_snapshot(snapshot_id, False)
+        snapshot = self.storage.get_snapshot(snapshot_id)
         snapshot.add_tags(tags)
 
     def get_tags(self, snapshot_id):
@@ -283,7 +284,7 @@ class SnapshotManager:
             Retrieve tags:
                 tags = manager.get_tags("snapshot_id")
         """
-        snapshot = self.storage.get_snapshot(snapshot_id, False)
+        snapshot = self.storage.get_snapshot(snapshot_id)
         return snapshot.tags
 
     def remove_tags(self, snapshot_id, tags):
@@ -301,7 +302,7 @@ class SnapshotManager:
             Remove tags from a Snapshot:
                 manager.remove_tags("snap_id", ["obsolete"])
         """
-        snapshot = self.storage.get_snapshot(snapshot_id, False)
+        snapshot = self.storage.get_snapshot(snapshot_id)
         snapshot.remove_tags(tags)
 
     # Querying and Listing PytreeSnapshots
@@ -338,39 +339,40 @@ class SnapshotManager:
 
         Args:
             index (int): Index of the Snapshot in the creation order.
-            deepcopy (bool, optional): Whether to return a deep copy of the PyTree.
+            deepcopy (bool, optional): Whether to return a deep copy of the data.
 
         Returns:
-            The PyTree of the Snapshot at the specified index.
+            The data of the Snapshot at the specified index.
 
         Raises:
             IndexError: If the index is out of range.
 
         Examples:
             Retrieve a Snapshot by index:
-                pytree = manager.get_snapshot_by_index(0)
+                data = manager.get_snapshot_by_index(0)
         """
         if index < 0 or index >= len(self.snapshot_order):
             raise IndexError(f"Index '{index}' is out of range.")
         snapshot_id = self.snapshot_order[index]
-        return self.get_snapshot(snapshot_id, deepcopy=deepcopy)
+        snapshot = self.storage.get_snapshot(snapshot_id)
+        return snapshot.get_data(self._should_deepcopy_on_retrieve(deepcopy))
 
     def get_oldest_snapshot(self, deepcopy=DEFAULT):
         """
         Retrieve the oldest Snapshot.
 
         Args:
-            deepcopy (bool, optional): Whether to return a deep copy of the PyTree.
+            deepcopy (bool, optional): Whether to return a deep copy of the data.
 
         Returns:
-            The PyTree of the oldest Snapshot.
+            The data of the oldest Snapshot.
 
         Raises:
             IndexError: If no PytreeSnapshots are available.
 
         Examples:
             Retrieve the oldest Snapshot:
-                pytree = manager.get_oldest_snapshot()
+                data = manager.get_oldest_snapshot()
         """
         if not self.storage.snapshot_order:
             raise IndexError("No PytreeSnapshots available.")

@@ -355,3 +355,59 @@ def test_reject_low_ranked_snapshot():
     assert len(snapshots) == 3, "Number of snapshots exceeds max_snapshots."
     assert "snap5" not in snapshots, "Low-ranked snapshot was incorrectly added."
     assert snapshots == ["snap2", "snap3", "snap1"], "Snapshots are not ordered correctly after rejection."
+
+def test_override_deepcopy_on_retrieve():
+    """Test overriding deepcopy_on_retrieve during a retrieval operation."""
+    manager = SnapshotManager(deepcopy_on_save=False)
+
+    # Save a snapshot
+    pytree = {"a": [1, 2, 3]}
+    snapshot_id = manager.save_snapshot(pytree)
+
+    # Retrieve the snapshot without deepcopy
+    retrieved = manager.get_snapshot(snapshot_id, deepcopy=False)
+
+    # Modify the retrieved PyTree
+    retrieved["a"].append(4)
+
+    # Retrieve the snapshot again
+    original = manager.get_snapshot(snapshot_id)
+
+    # Assert the original and retrieved are not isolated
+    assert original["a"] == [1, 2, 3, 4], "Deepcopy override on retrieve did not work correctly."
+    assert retrieved["a"] == [1, 2, 3, 4], "Modified retrieved PyTree was not as expected."
+
+def test_default_deepcopy_logic():
+    """Test the default deepcopy settings for saving and retrieving snapshots."""
+    manager = SnapshotManager(deepcopy_on_save=True, deepcopy_on_retrieve=True)
+
+    # Save a snapshot with default deepcopy setting
+    pytree = {"a": [1, 2, 3]}
+    snapshot_id = manager.save_snapshot(pytree)
+
+    # Modify the original PyTree
+    pytree["a"].append(4)
+
+    # Retrieve the snapshot
+    retrieved = manager.get_snapshot(snapshot_id)
+
+    # Assert the original and retrieved are isolated
+    assert retrieved["a"] == [1, 2, 3], "Deepcopy on save failed to isolate the snapshot."
+    assert pytree["a"] == [1, 2, 3, 4], "Original PyTree was unexpectedly modified."
+
+def test_override_deepcopy_on_save():
+    """Test overriding deepcopy_on_save during a save operation."""
+    manager = SnapshotManager(deepcopy_on_save=True)
+
+    # Save a snapshot with deepcopy explicitly disabled
+    pytree = {"a": [1, 2, 3]}
+    snapshot_id = manager.save_snapshot(pytree, deepcopy=False)
+
+    # Modify the original PyTree
+    pytree["a"].append(4)
+
+    # Retrieve the snapshot
+    retrieved = manager.get_snapshot(snapshot_id)
+
+    # Assert the original and retrieved are not isolated
+    assert retrieved["a"] == [1, 2, 3, 4], "Deepcopy override on save did not work correctly."

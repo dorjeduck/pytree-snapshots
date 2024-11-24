@@ -70,7 +70,7 @@ class PyTreeSnapshotManager(SnapshotManager):
             Transformed PyTree or list of transformed PyTrees.
         """
         # Resolve DEFAULT to the manager's deepcopy setting
-        deepcopy = self.deepcopy if deepcopy is DEFAULT else deepcopy
+        deepcopy = self.deepcopy_on_retrieve if deepcopy is DEFAULT else deepcopy
 
         if isinstance(snapshot_ids, str):
             # Single snapshot case

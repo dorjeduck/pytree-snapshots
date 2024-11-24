@@ -69,8 +69,7 @@ class SnapshotStorage:
             snapshot_id (str): The ID of the snapshot.
             snapshot (Snapshot): The Snapshot object to store.
             overwrite (bool): Whether to overwrite an existing snapshot. Defaults to False.
-            deepcopy (bool): Whether to store a deep copy of the snapshot. Defaults to True.
-
+           
         Raises:
             ValueError: If the snapshot ID already exists and `overwrite` is False.
         """
@@ -121,13 +120,12 @@ class SnapshotStorage:
 
             return True
 
-    def get_snapshot(self, snapshot_id, deepcopy=True):
+    def get_snapshot(self, snapshot_id):
         """
         Retrieve a snapshot by its ID.
 
         Args:
             snapshot_id (str): The ID of the snapshot to retrieve.
-            deepcopy (bool, optional): Whether to return a deep copy of the snapshot. Defaults to True.
 
         Returns:
             Snapshot: The requested snapshot.
@@ -135,7 +133,7 @@ class SnapshotStorage:
         snapshot = self.snapshots.get(snapshot_id)
         if snapshot is None:
             raise KeyError(f"Snapshot with ID {snapshot_id} not found.")
-        return copy.deepcopy(snapshot) if deepcopy else snapshot
+        return snapshot
 
     def remove_snapshot(self, snapshot_id):
         """
