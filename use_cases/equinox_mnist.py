@@ -8,6 +8,10 @@ from jaxtyping import Array, Float, Int, PyTree
 
 from pytree_snapshots import PyTreeSnapshotManager
 
+###
+# From https://docs.kidger.site/equinox/examples/mnist/
+###
+
 # Hyperparameters
 
 BATCH_SIZE = 64
@@ -128,6 +132,7 @@ def evaluate(model: CNN, testloader: torch.utils.data.DataLoader):
 
 optim = optax.adamw(LEARNING_RATE)
 
+
 # Initialize PyTreeSnapshotManager with max_snapshots and custom comparison function
 def cmp_by_accuracy(snapshot1, snapshot2):
     return snapshot1.metadata["accuracy"] - snapshot2.metadata["accuracy"]
@@ -136,6 +141,7 @@ def cmp_by_accuracy(snapshot1, snapshot2):
 ptsm = PyTreeSnapshotManager(
     deepcopy_on_retrieve=False, max_snapshots=5, cmp_function=cmp_by_accuracy
 )
+
 
 def train(
     model: CNN,
@@ -198,7 +204,7 @@ def train(
                 "accuracy": float(test_accuracy.item()),
             },
         )
-    
+
     return model
 
 
