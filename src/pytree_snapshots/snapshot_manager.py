@@ -190,7 +190,7 @@ class SnapshotManager:
         original_snapshot = self.storage.get_snapshot(snapshot_id)
 
         # Create a deep copy of the original PyTree
-        cloned_pytree = original_snapshot.get_data(self.deepcopy)
+        cloned_pytree = original_snapshot.get_data(True)
 
         # Merge metadata (if provided) with the original snapshot's metadata
         cloned_metadata = original_snapshot.metadata.copy()
@@ -429,7 +429,8 @@ class SnapshotManager:
         # Create a new manager with the loaded state
         manager = SnapshotManager(
             max_snapshots=state["max_snapshots"],
-            deepcopy=state["deepcopy"],
+            deepcopy_on_save=state["deepcopy_on_save"],
+            deepcopy_on_retrieve=state["deepcopy_on_retrieve"],
         )
 
         # Restore snapshots into the manager's storage

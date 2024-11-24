@@ -7,7 +7,7 @@ manager = SnapshotManager(deepcopy=True)  # Default behavior is deepcopy enabled
 snapshot_id = manager.save_snapshot({"a": 1, "b": [2, 3]})
 
 # Retrieve a snapshot without deepcopy (shallow reference)
-retrieved_reference = manager.get_snapshot(snapshot_id, deepcopy=False)
+retrieved_reference = manager.get_snapshot(snapshot_id, deepcopy_on_retrieve=False)
 
 # Modify the retrieved snapshot
 retrieved_reference["b"].append(4)

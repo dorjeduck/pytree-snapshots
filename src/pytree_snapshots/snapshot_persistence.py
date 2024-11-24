@@ -28,7 +28,8 @@ class SnapshotPersistence:
             },
             "snapshot_order": manager.storage.snapshot_order,
             "max_snapshots": manager.storage.max_snapshots,
-            "deepcopy": manager.deepcopy,
+            "deepcopy_on_save": manager.deepcopy_on_save,
+            "deepcopy_on_retrieve": manager.deepcopy_on_retrieve,
         }
 
         # Serialize the state

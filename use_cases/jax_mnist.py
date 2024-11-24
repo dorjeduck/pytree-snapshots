@@ -112,7 +112,7 @@ def cmp_by_accuracy(snapshot1, snapshot2):
 
 
 ptsm = PyTreeSnapshotManager(
-    deepcopy=False, max_snapshots=5, cmp_function=cmp_by_accuracy
+    deepcopy_on_retrieve=False, max_snapshots=5, cmp_function=cmp_by_accuracy
 )
 
 
