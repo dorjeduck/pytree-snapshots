@@ -164,7 +164,7 @@ for snapshot_id in ranked_snapshots:
     )
 
 # Plotting the training loss and test accuracy
-"""
+
 plt.figure(figsize=(12, 5))
 plt.subplot(1, 2, 1)
 plt.plot(loss_history)
@@ -179,4 +179,4 @@ plt.ylabel("Accuracy")
 plt.title("Test Accuracy")
 
 plt.show()
-"""
+

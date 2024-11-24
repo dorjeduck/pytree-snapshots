@@ -10,7 +10,7 @@ A lightweight and flexible manager for capturing and managing data snapshots in 
 - **General-Purpose Compatibility**: Works seamlessly with any Python object.
 - **Metadata and Tagging**: Organize snapshots with metadata and tags for better discoverability.
 - **Advanced Query Support**: Perform complex searches using metadata, tags, time ranges, or custom criteria.
-- **Deepcopy**: Fine-tune storage and retrieval behavior to balance performance and memory usage.
+- **Deepcopy**: Fine-tune storage and retrieval behavior.
 - **Designed for PyTrees**: Includes specialized features for JAX PyTrees, such as validation, transformations and PyTree-specific queries. (more to come)
 
 ## Installation
