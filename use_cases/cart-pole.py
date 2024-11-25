@@ -91,7 +91,7 @@ EPS_DECAY = 1000
 TAU = 0.005
 LR = 1e-4
 
-MAX_SNAPSHOTS = 5
+MAX_SNAPSHOTS = 10
 
 
 # Get number of actions from gym action space
@@ -301,7 +301,7 @@ policy_evaluator = PolicyEvaluator(env, device)
 
 
 # Evaluate individual policies using IndividualPolicyEvaluator
-print("\nEvaluating Individual Policies...")
+print("\bTesting Individual Policies...")
 
 individual_results = []
 for snapshot_id in ranked_snapshots:
@@ -326,7 +326,7 @@ for snapshot_id in ranked_snapshots:
 
     # Print the results for this policy
     print(
-        f"Episode: {episode}, Training Reward: {training_reward}, "
+        f"(Episode: {episode}) Training Reward: {training_reward}, "
         f"Avg Test Reward: {psr.avg_reward:.2f}, Variance: {psr.variance:.2f}"
     )
 
@@ -368,11 +368,9 @@ for label, policy_class, extra_args in policy_classes:
     )
     psr = policy_evaluator.eval(policy=policy, num_episodes=NUM_EVALUATION_EPISODES)
 
-    print(
-        f"{label} - Avg Test Reward: {psr.avg_reward:.2f}, Variance: {psr.variance:.2f}"
-    )
+    print(f"Avg Test Reward: {psr.avg_reward:.2f}, Variance: {psr.variance:.2f}")
 
-print("Complete")
+print("\nComplete")
 plot_durations(show_result=True)
 plt.ioff()
 plt.show()
