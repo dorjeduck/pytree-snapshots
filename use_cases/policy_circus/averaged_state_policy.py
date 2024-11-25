@@ -2,10 +2,10 @@ from .base_policy import BasePolicy
 import torch
 
 
-class AveragedPolicy(BasePolicy):
+class AveragedStatePolicy(BasePolicy):
     def __init__(self, id, policy_net, individual_results, device):
         """
-        Initialize the AveragedPolicy.
+        Initialize the AveragedStatePolicy.
 
         Args:
             id (str): Identifier for the policy.

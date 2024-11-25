@@ -15,12 +15,12 @@ import torch.nn.functional as F
 from pytree_snapshots import SnapshotManager
 
 from policy_circus import (
-    AveragedPolicy,
-    WeightedPolicy,
+    AveragedStatePolicy,
+    WeightedStatePolicy,
     PolicyEvaluator,
     DQNPolicy,
-    SoftmaxPolicy,
-    QValuePolicy,
+    WeightedActionPolicy,
+    WeightedQValuePolicy,
     compute_policy_weights,
 )
 
@@ -339,20 +339,24 @@ weighted_state_dicts = [
 
 # Define evaluators and configurations
 policy_classes = [
-    ("Averaged Policy", AveragedPolicy, {"individual_results": individual_results}),
+    (
+        "Averaged Policy",
+        AveragedStatePolicy,
+        {"individual_results": individual_results},
+    ),
     (
         "Weighted Policy",
-        WeightedPolicy,
+        WeightedStatePolicy,
         {"weighted_state_dicts": weighted_state_dicts},
     ),
     (
         "Softmax Policy",
-        SoftmaxPolicy,
+        WeightedActionPolicy,
         {"weighted_state_dicts": weighted_state_dicts, "n_actions": n_actions},
     ),
     (
         "QValue Policy",
-        QValuePolicy,
+        WeightedQValuePolicy,
         {"weighted_state_dicts": weighted_state_dicts, "n_actions": n_actions},
     ),
 ]

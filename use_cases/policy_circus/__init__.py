@@ -1,9 +1,9 @@
-from .averaged_policy import AveragedPolicy
+from .averaged_state_policy import AveragedStatePolicy
 from .base_policy import BasePolicy
 from .dqn_policy import DQNPolicy
-from .softmax_policy import SoftmaxPolicy
-from .qvalue_policy import QValuePolicy
-from .weighted_policy import WeightedPolicy
+from .weighted_action_policy import WeightedActionPolicy
+from .weighted_qvalue_policy import WeightedQValuePolicy
+from .weighted_state_policy import WeightedStatePolicy
 
 from .policy_evaluator import (
     PolicyEvaluator,
@@ -13,13 +13,13 @@ from .policy_evaluator import (
 from .utils import compute_policy_weights
 
 __all__ = [
-    "AveragedPolicy",
+    "AveragedStatePolicy",
     "BasePolicy",
     "DQNPolicy",
     "PolicyEvaluator",
     "PolicyEvaluationResult",
-    "QValuePolicy",
-    "SoftmaxPolicy",
-    "WeightedPolicy",
+    "WeightedQValuePolicy",
+    "WeightedActionPolicy",
+    "WeightedStatePolicy",
     "compute_policy_weights",
 ]

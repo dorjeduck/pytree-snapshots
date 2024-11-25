@@ -2,7 +2,7 @@ from .base_policy import BasePolicy
 import torch
 
 
-class WeightedPolicy(BasePolicy):
+class WeightedStatePolicy(BasePolicy):
     def __init__(self, id, policy_net, weighted_state_dicts, device):
         super().__init__(id, policy_net)
 

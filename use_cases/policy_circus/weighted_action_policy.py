@@ -2,7 +2,7 @@ from .base_policy import BasePolicy
 import torch
 
 
-class QValuePolicy(BasePolicy):
+class WeightedActionPolicy(BasePolicy):
     def __init__(self, id, policy_net, weighted_state_dicts, n_actions, device):
         super().__init__(id, policy_net)
 
@@ -41,12 +41,12 @@ class QValuePolicy(BasePolicy):
         Returns:
             int: Index of the selected action.
         """
+        action_probs = torch.zeros(self.n_actions, device=self.device)
 
-        # Compute Q-values
-        q_values = torch.zeros(self.n_actions, device=self.device)
-        for state_dict, weight in self.weighted_state_dicts:
-            self.policy_net.load_state_dict(state_dict)
-            q_values += self.policy_net(state_tensor).squeeze(0) * weight
+        # Iterate over pre-loaded models and their weights
+        for model, weight in self.models:
+            with torch.no_grad():  # Disable gradients for inference
+                probs = torch.softmax(model(state_tensor), dim=1).squeeze(0)
+            action_probs += probs * weight
 
-        # Select the action with the highest Q-value
-        return torch.argmax(q_values).item()
+        return torch.argmax(action_probs).item()
