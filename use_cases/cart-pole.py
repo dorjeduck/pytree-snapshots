@@ -3,10 +3,6 @@ import math
 import random
 import matplotlib
 import matplotlib.pyplot as plt
-import os
-import sys
-import jax
-
 
 from collections import namedtuple, deque
 from itertools import count
@@ -18,8 +14,15 @@ import torch.nn.functional as F
 
 from pytree_snapshots import SnapshotManager
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from ensemble_evaluator import QValueEnsembleEvaluator, SoftmaxEnsembleEvaluator
+from policy_circus import (
+    AveragedPolicy,
+    WeightedPolicy,
+    PolicyEvaluator,
+    DQNPolicy,
+    SoftmaxPolicy,
+    QValuePolicy,
+    compute_policy_weights,
+)
 
 
 env = gym.make("CartPole-v1")
@@ -87,6 +90,9 @@ EPS_END = 0.05
 EPS_DECAY = 1000
 TAU = 0.005
 LR = 1e-4
+
+MAX_SNAPSHOTS = 5
+
 
 # Get number of actions from gym action space
 n_actions = env.action_space.n
@@ -205,9 +211,9 @@ def optimize_model():
 
 
 if torch.cuda.is_available() or torch.backends.mps.is_available():
-    num_episodes = 200
+    num_episodes = 300
 else:
-    num_episodes = 50
+    num_episodes = 100
 
 
 # Initialize SnapshotManager with a custom comparison function
@@ -215,7 +221,11 @@ def cmp_by_reward(snapshot1, snapshot2):
     return snapshot1.metadata["reward"] - snapshot2.metadata["reward"]
 
 
-manager = SnapshotManager(max_snapshots=5, cmp_function=cmp_by_reward)
+snapshot_manager = SnapshotManager(
+    max_snapshots=MAX_SNAPSHOTS, cmp_function=cmp_by_reward
+)
+
+printed_dot_last = False
 
 for i_episode in range(num_episodes):
     # Initialize the environment and get its state
@@ -258,142 +268,111 @@ for i_episode in range(num_episodes):
             plot_durations()
 
             # Save snapshot of the policy network and metadata
-            snapshot_id = manager.save_snapshot(
+            snapshot_id = snapshot_manager.save_snapshot(
                 policy_net.state_dict(),
                 snapshot_id=f"episode_{i_episode}",
                 metadata={"episode": i_episode, "reward": t + 1},
             )
             if snapshot_id:
+                if printed_dot_last:
+                    print("")
+                    printed_dot_last = False
+
                 print(
-                    f"Snapshot from Episode {i_episode} with Reward {t + 1} "
-                    f"entered the top 5"
+                    f"Snapshot from Episode {i_episode} entered the top {MAX_SNAPSHOTS} with Reward {t + 1}",
                 )
+
+            else:
+                print(".", end="", flush=True)
+                printed_dot_last = True
 
             break
 
 
 # Retrieve and print the top snapshots
-ranked_snapshots = manager.get_ranked_snapshots()
-print("\nTop 5 Snapshots by Reward:")
+ranked_snapshots = snapshot_manager.get_ranked_snapshots()
+print(f"\n\nTop {MAX_SNAPSHOTS} Snapshots by Reward:")
 for snapshot_id in ranked_snapshots:
-    metadata = manager.get_metadata(snapshot_id)
-    print(
-        f"Snapshot ID: {snapshot_id}, Episode: {metadata['episode']}, Reward: {metadata['reward']}"
-    )
+    metadata = snapshot_manager.get_metadata(snapshot_id)
+    print(f"Episode: {metadata['episode']}, Reward: {metadata['reward']}")
+
+NUM_EVALUATION_EPISODES = 10
+policy_evaluator = PolicyEvaluator(env, device)
 
 
-def evaluate_policy(policy_state, num_episodes=10):
-    """
-    Evaluate a policy over a specified number of episodes and return the average reward.
+# Evaluate individual policies using IndividualPolicyEvaluator
+print("\nEvaluating Individual Policies...")
 
-    Args:
-        policy_state: The state dictionary of the policy network.
-        num_episodes: Number of episodes to run for evaluation.
-
-    Returns:
-        The average reward across the episodes.
-    """
-    policy_net.load_state_dict(policy_state)
-    total_rewards = []
-
-    for _ in range(num_episodes):
-        state, info = env.reset()
-        episode_reward = 0
-        while True:
-            state_tensor = torch.tensor(
-                state, dtype=torch.float32, device=device
-            ).unsqueeze(0)
-            action = policy_net(state_tensor).max(1).indices.item()
-            state, reward, done, truncated, _ = env.step(action)
-            episode_reward += reward
-            if done or truncated:
-                break
-        total_rewards.append(episode_reward)
-
-    return sum(total_rewards) / len(total_rewards)
-
-
-# After training, evaluate each ranked snapshot
-print("\nEvaluating Ranked Snapshots...")
-evaluated_snapshots = []
+individual_results = []
 for snapshot_id in ranked_snapshots:
-    policy_state = manager[snapshot_id]  # Retrieve the snapshot
-    avg_reward = evaluate_policy(policy_state)  # Evaluate the policy
-    metadata = manager.get_metadata(snapshot_id)
-    evaluated_snapshots.append(
-        {
-            "snapshot_id": snapshot_id,
-            "episode": metadata["episode"],
-            "reward": metadata["reward"],
-            "avg_test_reward": avg_reward,
-        }
+
+    dqn_policy = DQNPolicy(
+        snapshot_id,
+        policy_net=policy_net,
+        state_dict=snapshot_manager[snapshot_id],
+        device=device,
     )
 
-# Print evaluated results
-print("\nRanked Snapshots with Evaluation Results:")
-for snapshot in evaluated_snapshots:
+    # Evaluate the policy
+    psr = policy_evaluator.eval(policy=dqn_policy, num_episodes=NUM_EVALUATION_EPISODES)
+
+    # Retrieve metadata for better reporting
+    metadata = snapshot_manager.get_metadata(snapshot_id)
+    episode = metadata["episode"]
+    training_reward = metadata["reward"]
+
+    # Store the results
+    individual_results.append(psr)
+
+    # Print the results for this policy
     print(
-        f"Snapshot ID: {snapshot['snapshot_id']}, "
-        f"Episode: {snapshot['episode']}, "
-        f"Training Reward: {snapshot['reward']:.2f}, "
-        f"Test Avg Reward: {snapshot['avg_test_reward']}"
+        f"Episode: {episode}, Training Reward: {training_reward}, "
+        f"Avg Test Reward: {psr.avg_reward:.2f}, Variance: {psr.variance:.2f}"
     )
 
+policy_weights = compute_policy_weights(individual_results, 0.5)
 
-def average_top_states(manager, top_n=5):
-    """
-    Calculate the averaged state dictionary from the top snapshots.
+weighted_state_dicts = [
+    (snapshot_manager[id], weight)
+    for id, weight in zip(ranked_snapshots, policy_weights)
+]
 
-    Args:
-        manager: The SnapshotManager instance.
-        top_n: Number of top snapshots to average.
+# Define evaluators and configurations
+policy_classes = [
+    ("Averaged Policy", AveragedPolicy, {"individual_results": individual_results}),
+    (
+        "Weighted Policy",
+        WeightedPolicy,
+        {"weighted_state_dicts": weighted_state_dicts},
+    ),
+    (
+        "Softmax Policy",
+        SoftmaxPolicy,
+        {"weighted_state_dicts": weighted_state_dicts, "n_actions": n_actions},
+    ),
+    (
+        "QValue Policy",
+        QValuePolicy,
+        {"weighted_state_dicts": weighted_state_dicts, "n_actions": n_actions},
+    ),
+]
 
-    Returns:
-        A state dictionary with averaged parameters, or None if no snapshots are available.
-    """
-    ranked_snapshots = manager.get_ranked_snapshots()[:top_n]
-    if not ranked_snapshots:
-        return None  # Graceful handling when no snapshots are available
+# Evaluate each policy
+for label, policy_class, extra_args in policy_classes:
+    print(f"\nTesting {label}...")
+    policy = policy_class(
+        id=label,
+        policy_net=policy_net,
+        device=device,
+        **extra_args,  # Pass extra arguments specific to each evaluator
+    )
+    psr = policy_evaluator.eval(policy=policy, num_episodes=NUM_EVALUATION_EPISODES)
 
-    # Retrieve the top state dictionaries
-    state_dicts = [manager[snapshot_id] for snapshot_id in ranked_snapshots]
+    print(
+        f"{label} - Avg Test Reward: {psr.avg_reward:.2f}, Variance: {psr.variance:.2f}"
+    )
 
-    # Average the state dictionaries
-    averaged_state = {
-        key: torch.stack([state_dict[key] for state_dict in state_dicts]).mean(dim=0)
-        for key in state_dicts[0]
-    }
-
-    return averaged_state
-
-# Test the averaged policy
-print("\nTesting the Averaged Policy...")
-
-## Retrieve the top state dictionaries
-state_dicts = [manager[snapshot_id] for snapshot_id in ranked_snapshots]
-
-## Average the state dictionaries
-averaged_state = {
-    key: torch.stack([state_dict[key] for state_dict in state_dicts]).mean(dim=0)
-    for key in state_dicts[0]
-}
-
-
-avg_test_reward = evaluate_policy(averaged_state, num_episodes=10)
-print(f"Average Test Reward of the Composite Policy: {avg_test_reward:.2f}")
-
-# Evaluate softmax ensemble
-print("\nTesting the Softmax Ensemble...")
-softmax_evaluator = SoftmaxEnsembleEvaluator(
-    device, policy_net, env, ranked_snapshots, manager
-)
-softmax_reward = softmax_evaluator.evaluate(num_episodes=10)
-print(f"Softmax Ensemble Reward: {softmax_reward:.2f}")
-
-# Evaluate Q-value ensemble
-print("\nTesting the Q-Value Ensemble...")
-qvalue_evaluator = QValueEnsembleEvaluator(
-    device, policy_net, env, ranked_snapshots, manager
-)
-qvalue_reward = qvalue_evaluator.evaluate(num_episodes=10)
-print(f"Q-Value Ensemble Reward: {qvalue_reward:.2f}")
+print("Complete")
+plot_durations(show_result=True)
+plt.ioff()
+plt.show()
