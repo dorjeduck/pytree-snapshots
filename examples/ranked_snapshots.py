@@ -1,11 +1,13 @@
 from snapshot_manager import SnapshotManager
 import uuid
 
+
 # Define a custom comparison function for ranking snapshots by accuracy
 def cmp_by_accuracy(snapshot1, snapshot2):
     accuracy1 = snapshot1.metadata.get("accuracy", 0)
     accuracy2 = snapshot2.metadata.get("accuracy", 0)
     return accuracy1 - accuracy2
+
 
 # Initialize the SnapshotManager with max_snapshots and custom comparison
 manager = SnapshotManager(max_snapshots=3, cmp_function=cmp_by_accuracy)
@@ -28,9 +30,14 @@ print("Snapshots by age:", manager.list_snapshots())
 manager.save_snapshot(pytree4, snapshot_id="snap4", metadata={"accuracy": 0.95})
 
 # Since max_snapshots is 3, the snapshot with the lowest accuracy (snap3) will be removed
-print("Snapshots after saving snap4 (ranked by accuracy):", manager.get_ranked_snapshots())
+print(
+    "Snapshots after saving snap4 (ranked by accuracy):",
+    manager.get_ranked_snapshot_ids(),
+)
 
 # Retrieve the best snapshot (highest accuracy) and its metadata
-best_snapshot_id = manager.get_ranked_snapshots()[0]
+best_snapshot_id = manager.get_ranked_snapshot_ids()[0]
 best_snapshot = manager.get_snapshot(best_snapshot_id)
-print(f"Best snapshot ID: {best_snapshot_id}, Best snapshot metadata: {manager.get_metadata(best_snapshot_id)}")
+print(
+    f"Best snapshot ID: {best_snapshot_id}, Best snapshot metadata: {best_snapshot.metadata}"
+)

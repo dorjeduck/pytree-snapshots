@@ -44,38 +44,32 @@ class SnapshotManager:
 
     def __getitem__(self, index, deepcopy=DEFAULT):
         """
-        Retrieve a Snapshot by index or ID.
+        Retrieve the data of a Snapshot by its index or ID.
 
         Args:
             index (int or str):
-                - If an integer, retrieves the Snapshot by its position in the order of creation.
-                - If a string, retrieves the Snapshot by its ID.
-            deepcopy (bool, optional): Whether to return a deep copy of the Snapshot's data. Defaults to the manager's deepcopy setting.
+                - If an integer, retrieves the Snapshot by its position in the creation order.
+                - If a string, retrieves the Snapshot by its unique ID.
+            deepcopy (bool, optional): If True, returns a deep copy of the Snapshot's data.
+                Defaults to the manager's `deepcopy_on_retrieve` setting.
 
         Returns:
-            The data of the Snapshot.
+            Any: The data of the requested Snapshot.
 
         Raises:
-            ValueError: If the index or ID is invalid.
+            ValueError: If `index` is neither an integer nor a string.
+            IndexError: If the index is out of range when `index` is an integer.
+            ValueError: If the Snapshot ID does not exist when `index` is a string.
         """
+
         if isinstance(index, int):
-            # Get snapshot ID by index using the storage layer
-            try:
-                snapshot_id = self.storage.get_snapshot_id_by_index(index)
-            except IndexError:
-                raise ValueError(f"Index '{index}' is out of range.")
+            # Retrieve Snapshot by creation index
+            return self.get_snapshot_by_index(index, deepcopy=deepcopy)
         elif isinstance(index, str):
-            # Verify the ID exists
-            if not self.storage.has_snapshot(index):
-                raise ValueError(f"Snapshot ID '{index}' does not exist.")
-            snapshot_id = index
+            # Retrieve Snapshot by ID
+            return self.get_snapshot(index, deepcopy=deepcopy)
         else:
             raise ValueError(f"Invalid index type: {type(index)}. Must be int or str.")
-
-        # Retrieve the snapshot and return its data
-        snapshot = self.storage.get_snapshot(snapshot_id)
-
-        return snapshot.get_data(self._should_deepcopy_on_retrieve(deepcopy))
 
     # Save, Retrieve, and Delete PytreeSnapshots
 
@@ -92,144 +86,221 @@ class SnapshotManager:
         Save a new Snapshot or overwrite an existing one.
 
         Args:
-            data: The data to store in the Snapshot.
+            data (Any): The data to store in the Snapshot. Can be any serializable Python object or PyTree.
             snapshot_id (str, optional): Identifier for the Snapshot. A unique ID is generated if not provided.
-            metadata (dict, optional): Metadata to associate with the snapshot.
-            tags (list, optional): Tags to associate with the snapshot.
-            overwrite (bool): Whether to overwrite an existing snapshot.
-            deepcopy (bool, optional): Whether to override the default deepcopy_on_save setting.
-
+            metadata (dict, optional): Additional metadata to associate with the Snapshot. Defaults to None.
+            tags (list, optional): Tags to categorize or label the Snapshot. Defaults to None.
+            overwrite (bool): Whether to overwrite an existing Snapshot with the same ID. Defaults to False.
+            deepcopy (bool, optional): Whether to deepcopy the data before saving. If not specified,
+                uses the manager's `deepcopy_on_save` setting.
 
         Returns:
-            str or bool: The ID of the saved snapshot if successfully added, otherwise False.
+            str: The ID of the saved Snapshot if successfully added.
+            bool: False if the Snapshot was not saved due to storage constraints.
+
+        Raises:
+            ValueError: If attempting to save a Snapshot with an existing ID without `overwrite=True`.
+            TypeError: If `tags` or `metadata` is not of the correct type.
+
+        Examples:
+            Save a simple data structure:
+                manager.save_snapshot({"key": "value"}, tags=["example"], metadata={"desc": "test"})
+
+            Overwrite an existing snapshot:
+                manager.save_snapshot(data, snapshot_id="existing_id", overwrite=True)
         """
-        snapshot_id = snapshot_id or str(uuid.uuid4())
 
-        deepcopy = deepcopy if deepcopy is not DEFAULT else self.deepcopy_on_save
+        if tags is not None and not isinstance(tags, list):
+            raise TypeError("tags must be a list.")
+        if metadata is not None and not isinstance(metadata, dict):
+            raise TypeError("metadata must be a dictionary.")
 
-        snapshot = Snapshot(data, metadata, tags, deepcopy=deepcopy)
+        deepcopy = self.deepcopy_on_save if deepcopy is DEFAULT else deepcopy
 
-        added = self.storage.add_snapshot(snapshot_id, snapshot, overwrite=overwrite)
+        # Check if overwriting is not allowed
+        if not overwrite and self.storage.has_snapshot(snapshot_id):
+            raise ValueError(
+                f"Snapshot ID '{snapshot_id}' already exists. Set `overwrite=True` to replace it."
+            )
 
-        if not added:
-            # Snapshot was not added due to space limit and comparison logic
+        # Create the snapshot using the factory method
+        snapshot = self._create_snapshot(
+            data=data,
+            metadata=metadata,
+            tags=tags,
+            deepcopy=deepcopy,
+            snapshot_id=snapshot_id,
+        )
+
+        # Add the snapshot to storage
+
+        if not self.storage.add_snapshot(snapshot, overwrite=overwrite):
+            # Snapshot was not added due to storage constraints / cmp policy
             return False
 
-        return snapshot_id
+        return snapshot.id
 
     def get_snapshot(self, snapshot_id, deepcopy=DEFAULT):
         """
-        Retrieve the data from a Snapshot.
+        Retrieve a Snapshot by its unique ID.
 
         Args:
-            snapshot_id (str): The ID of the snapshot to retrieve.
-            deepcopy (bool, optional): Whether to return a deep copy of the snapshot's data.
+            snapshot_id (str): The unique identifier of the Snapshot to retrieve.
+            deepcopy (bool, optional): Whether to return a deep copy of the Snapshot's data.
+                If not specified, defaults to the manager's `deepcopy_on_retrieve` setting.
 
         Returns:
-            The data stored in the snapshot.
+            Snapshot: The Snapshot object associated with the given ID.
 
         Raises:
-            ValueError: If the snapshot ID does not exist.
-        """
+            ValueError: If the Snapshot ID does not exist in the storage.
 
+        Examples:
+            Retrieve a Snapshot with a deep copy:
+                snapshot = manager.get_snapshot("example_id", deepcopy=True)
+
+            Retrieve a Snapshot without a deep copy:
+                snapshot = manager.get_snapshot("example_id", deepcopy=False)
+        """
         snapshot = self.storage.get_snapshot(snapshot_id)
-        return snapshot.get_data(self._should_deepcopy_on_retrieve(deepcopy))
+
+        deepcopy = self.deepcopy_on_retrieve if deepcopy is DEFAULT else deepcopy
+
+        return snapshot.clone(snapshot.id) if deepcopy else snapshot
 
     def get_latest_snapshot(self, deepcopy=DEFAULT):
         """
-        Retrieve the most recent snapshot.
+        Retrieve the most recently added Snapshot.
 
         Args:
-            deepcopy (bool, optional): Whether to return a deep copy.
+            deepcopy (bool, optional): Whether to return a deep copy of the Snapshot's data.
+                If not specified, defaults to the manager's `deepcopy_on_retrieve` setting.
 
         Returns:
-            The data of the most recent snapshot.
+            Snapshot: The most recently added Snapshot object.
 
         Raises:
-            IndexError: If no snapshots are available.
-        """
-        # Use storage to get the latest snapshot
-        snapshot_id = self.storage.snapshot_order[0]
-        snapshot = self.storage.get_snapshot(snapshot_id)
-        return snapshot.get_data(self._should_deepcopy_on_retrieve(deepcopy))
-
-    def get_ranked_snapshots(self):
-        """
-        Retrieve the list of snapshot IDs ordered by the comparison function if defined,
-        otherwise by their age (insertion order).
-
-        Returns:
-            list: Ordered list of snapshot IDs.
+            IndexError: If no snapshots are stored.
 
         Examples:
-            Get snapshots ranked by a custom comparison:
-                ranked_snapshots = manager.get_ranked_snapshots()
+            Retrieve the latest Snapshot with a deep copy:
+                latest_snapshot = manager.get_latest_snapshot(deepcopy=True)
+
+            Retrieve the latest Snapshot without a deep copy:
+                latest_snapshot = manager.get_latest_snapshot(deepcopy=False)
+        """
+        # Use storage to get the latest snapshot
+
+        if not self.storage.snapshot_order:
+            raise IndexError("No snapshots are available.")
+
+        # Use storage to get the latest snapshot ID
+        latest_snapshot_id = self.storage.snapshot_order[0]
+
+        # Retrieve the snapshot using the get_snapshot method
+        return self.get_snapshot(latest_snapshot_id, deepcopy=deepcopy)
+
+    def get_ranked_snapshot_ids(self):
+        """
+        Retrieve a list of snapshot IDs ranked according to the comparison function.
+
+        If a custom comparison function (`cmp_function`) was provided during the initialization of
+        the manager, the snapshots will be ranked based on that function. If no comparison function
+        is defined, the snapshots are ranked by their creation time in insertion order.
+
+        Returns:
+            list[str]: A list of snapshot IDs ranked according to the defined criteria.
+
+        Examples:
+            Retrieve snapshot IDs ranked by a custom comparison:
+                ranked_ids = manager.get_ranked_snapshot_ids()
+
+            If no comparison function is defined:
+                ranked_ids = manager.get_ranked_snapshot_ids()  # Returns IDs in insertion order
         """
 
-        return self.storage.get_ranked_snapshots()
+        return self.storage.get_ranked_snapshot_ids()
 
     def remove_snapshot(self, snapshot_id):
         """
-        Delete a snapshot by its ID.
+        Remove a Snapshot by its unique ID.
 
         Args:
-            snapshot_id (str): The ID of the snapshot to delete.
+            snapshot_id (str): The unique identifier of the Snapshot to remove.
 
         Returns:
-            bool: True if the snapshot was deleted, False otherwise.
-        """
-        return self.storage.remove_snapshot(snapshot_id)
-
-    def clone_snapshot(self, snapshot_id, metadata=None):
-        """
-        Clone a snapshot with an optional update to metadata.
-
-        Args:
-            snapshot_id (str): The ID of the snapshot to clone.
-            metadata (dict, optional): Metadata to add or update in the cloned snapshot.
-
-        Returns:
-            str: The ID of the cloned snapshot.
+            bool: True if the Snapshot was successfully removed, False if no Snapshot with the
+                given ID exists in storage.
 
         Raises:
-            ValueError: If the snapshot ID does not exist.
+            ValueError: If the provided snapshot_id is not a string.
+
+        Examples:
+            Remove a Snapshot by ID:
+                success = manager.remove_snapshot("example_id")
+                if success:
+                    print("Snapshot removed.")
+                else:
+                    print("Snapshot ID not found.")
         """
+        if not isinstance(snapshot_id, str):
+            raise ValueError(f"Snapshot ID must be a string, got {type(snapshot_id)}.")
+
+        return self.storage.remove_snapshot(snapshot_id)
+
+    def clone_snapshot(self, snapshot_id):
+        """
+        Create a clone of an existing Snapshot and add it to storage.
+
+        The cloned Snapshot will have a new unique ID but retain the same data, metadata, and tags
+        as the original. It is stored in the manager with the same settings as any new Snapshot.
+
+        Args:
+            snapshot_id (str): The unique ID of the Snapshot to clone.
+
+        Returns:
+            str: The ID of the newly created cloned Snapshot.
+
+        Raises:
+            ValueError: If the provided `snapshot_id` does not exist in storage.
+
+        Examples:
+            Clone an existing Snapshot:
+                new_snapshot_id = manager.clone_snapshot("existing_snapshot_id")
+                print(f"Cloned snapshot ID: {new_snapshot_id}")
+        """
+
+        # Retrieve the original snapshot by reference
         original_snapshot = self.storage.get_snapshot(snapshot_id)
 
-        # Create a deep copy of the original data
-        cloned_pytree = original_snapshot.get_data(True)
+        # Clone the snapshot to create an independent copy
+        cloned_snapshot = original_snapshot.clone()
 
-        # Merge metadata (if provided) with the original snapshot's metadata
-        cloned_metadata = original_snapshot.metadata.copy()
-        if metadata:
-            cloned_metadata.update(metadata)
-
-        # Save the cloned snapshot with a new ID
-        cloned_snapshot_id = str(uuid.uuid4())
-        self.save_snapshot(
-            cloned_pytree, snapshot_id=cloned_snapshot_id, metadata=cloned_metadata
-        )
-
-        return cloned_snapshot_id
-        # Metadata Management
+        self.storage.add_snapshot(cloned_snapshot)
+        return cloned_snapshot.id
 
     def get_metadata(self, snapshot_id):
         """
-        Retrieve metadata for a specific Snapshot.
+        Retrieve the metadata associated with a specific Snapshot.
+
+        This method fetches the metadata stored alongside the Snapshot identified by `snapshot_id`.
+        Metadata typically contains additional descriptive information about the Snapshot.
 
         Args:
-            snapshot_id (str): The ID of the Snapshot.
+            snapshot_id (str): The unique ID of the Snapshot whose metadata is to be retrieved.
 
         Returns:
-            dict: The metadata associated with the Snapshot.
+            dict: The metadata dictionary associated with the Snapshot.
 
         Raises:
-            ValueError: If the Snapshot ID does not exist.
+            ValueError: If the Snapshot with the given `snapshot_id` does not exist.
 
         Examples:
-            Retrieve metadata:
-                metadata = manager.get_metadata("snap_id")
+            Retrieve metadata for a specific Snapshot:
+                metadata = manager.get_metadata("example_snapshot_id")
+                print(metadata)
         """
+
         snapshot = self.storage.get_snapshot(snapshot_id)
         return snapshot.metadata
 
@@ -237,16 +308,24 @@ class SnapshotManager:
         """
         Update the metadata for a specific Snapshot.
 
+        This method merges the provided `new_metadata` dictionary with the existing metadata
+        of the Snapshot identified by `snapshot_id`. Existing keys in the metadata will be
+        updated, and new keys will be added.
+
         Args:
-            snapshot_id (str): The ID of the Snapshot to update.
-            new_metadata (dict): The new metadata to merge with the existing metadata.
+            snapshot_id (str): The unique ID of the Snapshot to update.
+            new_metadata (dict): A dictionary of new metadata to merge with the existing metadata.
 
         Raises:
-            ValueError: If the Snapshot ID does not exist.
+            ValueError: If the Snapshot ID does not exist in storage.
+            TypeError: If `new_metadata` is not a dictionary.
 
         Examples:
-            Update metadata:
+            Update metadata for a snapshot:
                 manager.update_metadata("snap_id", {"new_key": "new_value"})
+
+            Merge additional metadata:
+                manager.update_metadata("snap_id", {"updated_field": "new_value"})
         """
         if not isinstance(new_metadata, dict):
             raise TypeError("new_metadata must be a dictionary.")
@@ -260,13 +339,22 @@ class SnapshotManager:
         """
         Add tags to a Snapshot.
 
+        This method adds the provided tags to the Snapshot identified by `snapshot_id`.
+        Duplicate tags will be ignored, ensuring that each tag appears only once in the Snapshot.
+
         Args:
-            snapshot_id (str): The ID of the Snapshot.
-            tags (list): Tags to add.
+            snapshot_id (str): The unique ID of the Snapshot to which tags should be added.
+            tags (list[str]): A list of tags to add to the Snapshot. Each tag should be a string.
 
         Raises:
-            ValueError: If the Snapshot ID does not exist.
+            ValueError: If the Snapshot ID does not exist in the storage.
+            TypeError: If `tags` is not a list or contains non-string elements.
+
+        Examples:
+            Add new tags to a Snapshot:
+                manager.add_tags("example_id", ["important", "review"])
         """
+
         if not isinstance(tags, list):
             raise TypeError("tags must be a list.")
 
@@ -275,20 +363,21 @@ class SnapshotManager:
 
     def get_tags(self, snapshot_id):
         """
-        Retrieve tags for a specific Snapshot.
+        Retrieve the tags associated with a specific Snapshot.
 
         Args:
-            snapshot_id (str): The ID of the Snapshot.
+            snapshot_id (str): The unique ID of the Snapshot whose tags are to be retrieved.
 
         Returns:
-            list: The tags associated with the Snapshot.
+            list[str]: A list of tags associated with the Snapshot. If no tags are associated, returns an empty list.
 
         Raises:
-            ValueError: If the Snapshot ID does not exist.
+            ValueError: If the Snapshot ID does not exist in the storage.
 
         Examples:
-            Retrieve tags:
+            Retrieve tags for a Snapshot:
                 tags = manager.get_tags("snapshot_id")
+                print(tags)
         """
         snapshot = self.storage.get_snapshot(snapshot_id)
         return snapshot.tags
@@ -345,48 +434,52 @@ class SnapshotManager:
 
         Args:
             index (int): Index of the Snapshot in the creation order.
-            deepcopy (bool, optional): Whether to return a deep copy of the data.
+            deepcopy (bool, optional): Whether to return a deep copy of the Snapshot object.
 
         Returns:
-            The data of the Snapshot at the specified index.
+            Snapshot: The Snapshot object.
 
         Raises:
             IndexError: If the index is out of range.
 
         Examples:
             Retrieve a Snapshot by index:
-                data = manager.get_snapshot_by_index(0)
+                snapshot = manager.get_snapshot_by_index(0)
         """
-        if index < 0 or index >= len(self.snapshot_order):
+        if index < 0 or index >= len(self.storage.snapshot_order):
             raise IndexError(f"Index '{index}' is out of range.")
-        snapshot_id = self.snapshot_order[index]
-        snapshot = self.storage.get_snapshot(snapshot_id)
-        return snapshot.get_data(self._should_deepcopy_on_retrieve(deepcopy))
+
+        # Get the snapshot ID by its index
+        snapshot_id = self.storage.snapshot_order[index]
+
+        # Use the existing get_snapshot method to retrieve the snapshot
+        return self.get_snapshot(snapshot_id, deepcopy=deepcopy)
 
     def get_oldest_snapshot(self, deepcopy=DEFAULT):
         """
         Retrieve the oldest Snapshot.
 
         Args:
-            deepcopy (bool, optional): Whether to return a deep copy of the data.
+            deepcopy (bool, optional): Whether to return a deep copy of the Snapshot object.
 
         Returns:
-            The data of the oldest Snapshot.
+            Snapshot: The oldest Snapshot object.
 
         Raises:
-            IndexError: If no PytreeSnapshots are available.
+            IndexError: If no Snapshots are available.
 
         Examples:
             Retrieve the oldest Snapshot:
-                data = manager.get_oldest_snapshot()
+                snapshot = manager.get_oldest_snapshot()
         """
         if not self.storage.snapshot_order:
-            raise IndexError("No PytreeSnapshots available.")
+            raise IndexError("No Snapshots are available.")
 
         # Get the oldest snapshot ID from the storage
-        snapshot_id = self.storage.snapshot_order[0]
-        snapshot = self.storage.get_snapshot(snapshot_id)
-        return snapshot.get_data(self._should_deepcopy_on_retrieve(deepcopy))
+        oldest_snapshot_id = self.storage.snapshot_order[-1]
+
+        # Use the existing get_snapshot method to retrieve the snapshot
+        return self.get_snapshot(oldest_snapshot_id, deepcopy=deepcopy)
 
     def list_snapshots_by_age(self, ascending=True):
         """
@@ -408,47 +501,76 @@ class SnapshotManager:
             else list(reversed(self.storage.snapshot_order))
         )
 
-    def save_state(self, file_path, compress=True):
+    def _create_snapshot(self, data, metadata, tags, deepcopy, snapshot_id):
         """
-        Save the current state of the manager to a file.
+        Factory method to create a Snapshot. Can be overridden by subclasses.
 
         Args:
-            file_path (str): Path to the file where the state should be saved.
-            compress (bool): Whether to compress the saved state.
+            data: The data to store in the Snapshot.
+            metadata (dict): Metadata to associate with the snapshot.
+            tags (list): Tags to associate with the snapshot.
+            deepcopy (bool): Whether to deepcopy the data.
+            snapshot_id (str): Identifier for the Snapshot.
+
+        Returns:
+            Snapshot: The created Snapshot instance.
+        """
+
+        return Snapshot(
+            data,
+            metadata=metadata,
+            tags=tags,
+            deepcopy=deepcopy,
+            snapshot_id=snapshot_id,
+        )
+
+    def save_to_file(self, file_path, compress=True):
+        """
+        Save the current state of the SnapshotManager to a file.
+
+        The state includes all stored snapshots, metadata, and configuration. This allows for
+        persistent storage and later restoration of the manager's state.
+
+        Args:
+            file_path (str): The file path where the state should be saved.
+            compress (bool): Whether to compress the saved state. Defaults to True.
 
         Returns:
             None
+
+        Raises:
+            IOError: If there is an issue writing to the file.
+
+        Examples:
+            Save the state of the manager to a file:
+                manager.save_to_file("snapshot_manager_state.json")
+
+            Save without compression:
+                manager.save_to_file("snapshot_manager_state.json", compress=False)
         """
-        SnapshotPersistence.save_state(self, file_path, compress)
+
+        SnapshotPersistence.save_to_file(self, file_path, compress)
 
     @staticmethod
-    def load_state(file_path):
+    def load_from_file(file_path):
         """
-        Load a SnapshotManager state from a file.
+        Load a SnapshotManager instance from a file.
+
+        This method restores the state of a SnapshotManager from a file created using `save_to_file`.
+        The loaded state includes all stored snapshots, metadata, and configuration.
 
         Args:
-            file_path (str): Path to the file containing the saved state.
+            file_path (str): The path to the file containing the saved state.
 
         Returns:
-            SnapshotManager: A new manager instance with the loaded state.
+            SnapshotManager: A new instance of SnapshotManager initialized with the loaded state.
+
+        Raises:
+            IOError: If there is an issue reading from the file.
+            ValueError: If the file does not contain valid SnapshotManager data.
+
+        Examples:
+            Load a SnapshotManager from a saved file:
+                manager = SnapshotManager.load_from_file("snapshot_manager_state.json")
         """
-        state = SnapshotPersistence.load_state(file_path)
-
-        # Create a new manager with the loaded state
-        manager = SnapshotManager(
-            max_snapshots=state["max_snapshots"],
-            deepcopy_on_save=state["deepcopy_on_save"],
-            deepcopy_on_retrieve=state["deepcopy_on_retrieve"],
-        )
-
-        # Restore snapshots into the manager's storage
-        for snapshot_id, snapshot_data in state["snapshots"].items():
-            snapshot = Snapshot.from_dict(snapshot_data)
-            manager.storage.add_snapshot(snapshot_id, snapshot)
-
-        return manager
-
-    # private
-
-    def _should_deepcopy_on_retrieve(self, deepcopy):
-        return deepcopy if deepcopy is not DEFAULT else self.deepcopy_on_retrieve
+        return SnapshotPersistence.load_from_file(file_path, SnapshotManager, Snapshot)

@@ -162,7 +162,7 @@ cython_debug/
 #.idea/
 
 .DS_Store
-use_cases/MNIST
-x*.py
+use_cases/mnist/MNIST
+x*.*
 
 

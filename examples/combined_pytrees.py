@@ -13,12 +13,14 @@ manager.save_snapshot(snapshot1, snapshot_id="snapshot1")
 manager.save_snapshot(snapshot2, snapshot_id="snapshot2")
 manager.save_snapshot(snapshot3, snapshot_id="snapshot3")
 
+
 # Custom combine function: average corresponding leaves
 def average_leaves(leaves):
     return sum(leaves) / len(leaves)
 
+
 # Combine the snapshots using the average function
-combined_pytree = manager.combine_snapshots(
+combined_pytree = manager.tree_combine(
     snapshot_ids=["snapshot1", "snapshot2", "snapshot3"], combine_fn=average_leaves
 )
 

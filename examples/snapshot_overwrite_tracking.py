@@ -11,5 +11,5 @@ manager.save_snapshot({"a": 1, "b": 3}, snapshot_id="snap1", overwrite=True)
 
 # Retrieve and inspect the latest version
 latest_snapshot = manager.get_snapshot("snap1")
-print("Latest snapshot:", latest_snapshot)
+print("Latest snapshot data:", latest_snapshot.data)
 # Output: {'a': 1, 'b': 3}

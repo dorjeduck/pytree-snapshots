@@ -1,11 +1,12 @@
 from .snapshot_query_interface import SnapshotQueryInterface
 from .base_queries import (
-    Query,
     ByMetadataQuery,
     ByTagQuery,
     ByTimeRangeQuery,
     ByContentQuery,
 )
+
+from .logical_queries import AndQuery, OrQuery
 
 
 class SnapshotQuery(SnapshotQueryInterface):
@@ -36,17 +37,28 @@ class SnapshotQuery(SnapshotQueryInterface):
         query = ByMetadataQuery(key, value)
         return self.evaluate(query)
 
-    def by_tag(self, tag):
+    def by_tags(self, tags, require_all=True):
         """
-        Find snapshots by a specific tag.
+        Find snapshots by a specific tag or a list of tags with AND/OR logic.
 
         Args:
-            tag (str): Tag to search for.
+            tags (str or list): A single tag (str) or a list of tags (list of str) to search for.
+            require_all (bool): If True, perform an AND query (all tags must match).
+                                If False, perform an OR query (any tag can match).
 
         Returns:
             list: Snapshot IDs matching the criteria.
         """
-        query = ByTagQuery(tag)
+        if isinstance(tags, str):
+            tags = [tags]  # Convert a single tag into a list
+
+        if require_all:
+            # AND logic: All tags must match
+            query = AndQuery(*[ByTagQuery(tag) for tag in tags])
+        else:
+            # OR logic: Any tag can match
+            query = OrQuery(*[ByTagQuery(tag) for tag in tags])
+
         return self.evaluate(query)
 
     def by_time_range(self, start_time, end_time):

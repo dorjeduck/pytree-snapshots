@@ -1,7 +1,10 @@
 from .base_queries import Query
 
+
 class AndQuery(Query):
     def __init__(self, *queries):
+        if not all(hasattr(query, "evaluate") for query in queries):
+            raise ValueError("All items in queries must have an 'evaluate' method.")
         self.queries = queries
 
     def evaluate(self, snapshot):
@@ -10,6 +13,8 @@ class AndQuery(Query):
 
 class OrQuery(Query):
     def __init__(self, *queries):
+        if not all(hasattr(query, "evaluate") for query in queries):
+            raise ValueError("All items in queries must have an 'evaluate' method.")
         self.queries = queries
 
     def evaluate(self, snapshot):

@@ -290,7 +290,7 @@ for i_episode in range(num_episodes):
 
 
 # Retrieve and print the top snapshots
-ranked_snapshots = snapshot_manager.get_ranked_snapshots()
+ranked_snapshots = snapshot_manager.get_ranked_snapshot_ids()
 print(f"\n\nTop {MAX_SNAPSHOTS} Snapshots by Reward:")
 for snapshot_id in ranked_snapshots:
     metadata = snapshot_manager.get_metadata(snapshot_id)
@@ -309,7 +309,7 @@ for snapshot_id in ranked_snapshots:
     dqn_policy = DQNPolicy(
         snapshot_id,
         policy_net=policy_net,
-        state_dict=snapshot_manager[snapshot_id],
+        state_dict=snapshot_manager[snapshot_id].data,
         device=device,
     )
 
@@ -333,7 +333,7 @@ for snapshot_id in ranked_snapshots:
 policy_weights = compute_policy_weights(individual_results, 0.5)
 
 weighted_state_dicts = [
-    (snapshot_manager[id], weight)
+    (snapshot_manager[id].data, weight)
     for id, weight in zip(ranked_snapshots, policy_weights)
 ]
 

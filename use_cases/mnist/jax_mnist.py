@@ -154,7 +154,7 @@ for epoch in range(NUM_EPOCHS):
     )
 
 # Retrieve and print the ranked list of snapshots
-ranked_snapshots = ptsm.get_ranked_snapshots()
+ranked_snapshots = ptsm.get_ranked_snapshot_ids()
 
 print("\nFive Snapshots with the highest accuracy:")
 for snapshot_id in ranked_snapshots:
@@ -179,4 +179,3 @@ plt.ylabel("Accuracy")
 plt.title("Test Accuracy")
 
 plt.show()
-

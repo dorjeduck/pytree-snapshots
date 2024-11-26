@@ -1,8 +1,8 @@
 # Snapshot Manager
 
-A lightweight and versatile tool for managing snapshots of Python objects.
+A lightweight and versatile tool for managing Python objects, allowing users to create isolated snapshots or manage live references, both enriched with metadata and tags.
 
-Initially created with `JAX PyTrees` in mind, it works seamlessly with any Python object. A specialized `PyTreeSnapshotManager` is included for PyTree-specific operations, but its features are still limited and evolving.
+Initially created with `JAX PyTrees` in mind, it works seamlessly with a wide range of Python object. A specialized `PyTreeSnapshotManager` is included for PyTree-specific operations, but its features are still limited and evolving.
 
 **Note**: This project began as a personal experiment to explore snapshot management. As it grew into a potentially useful tool, I decided to share it on GitHub to gather feedback and suggestions. Currently, it’s in beta and may undergo significant changes as it matures.
 
@@ -12,6 +12,7 @@ Initially created with `JAX PyTrees` in mind, it works seamlessly with any Pytho
 - **Metadata and Tagging:** Associate metadata and tags with snapshots.
 - **Advanced Query Support**: Perform complex searches using metadata, tags, time ranges, custom criteria, and logical operations.
 - **Flexible Deepcopy Options**: Control how snapshots are stored and retrieved for optimal performance or data safety.
+- **Persistence**: Save all snapshots to disk and reload them later for continued training, evaluation, or analysis across sessions.
 - **PyTreeSnapshotManager**: Includes specialized features for JAX PyTrees, such as validation, transformations and PyTree-specific queries. (more to come)
 
 ## Installation
@@ -21,8 +22,8 @@ Initially created with `JAX PyTrees` in mind, it works seamlessly with any Pytho
 First, clone the repository to your local machine:
 
 ```bash
-git clone https://github.com/your-username/pytree-snapshots.git
-cd pytree-snapshots
+git clone https://github.com/dorjeduck/snapshot-manager.git
+cd snapshot_manager
 ```
 
 ### Install the Package
@@ -37,7 +38,7 @@ pip install .
 
 ### Save and retrieve snapshots
 
-Basic example demonstrating how to save and retrieve snapshots of PyTrees.
+Basic example demonstrating how to save and retrieve snapshots of a dictionary.
 
 ```python
 from snapshot_manager import SnapshotManager
@@ -45,14 +46,18 @@ from snapshot_manager import SnapshotManager
 # Initialize the manager
 manager = SnapshotManager()
 
-# Save a snapshot
-data = {"a": 1, "b": 2}
-snapshot_id = manager.save_snapshot(data, metadata={"project": "example"})
+# Save a snapshot with metadata
+dic1 = {"a": 1, "b": 2}
+snapshot_id = manager.save_snapshot(dic1, metadata={"project": "example"})
 
 # Retrieve the snapshot
-retrieved = manager.get_snapshot(snapshot_id)
-print("Retrieved snapshot:", retrieved)
-# Output: Retrieved snapshot: {'a': 1, 'b': 2}
+retrieved_snapshot = manager.get_snapshot(snapshot_id)
+
+print("Data of retrieved snapshot:", retrieved_snapshot.data)
+# Output: Data of retrieved snapshot: {'a': 1, 'b': 2}
+
+print("Metadata:", retrieved_snapshot.metadata)
+# Output: Metadata: {'project': 'example'}
 ```
 
 ### Save and Transform PyTrees
@@ -62,25 +67,28 @@ For `JAX` users, here’s an example demonstrating PyTree-specific functionality
 ```python
 from snapshot_manager import PyTreeSnapshotManager
 
-# Initialize the PyTree manager
 manager = PyTreeSnapshotManager()
 
-# Save a PyTree
-pytree = {"a": 2, "b": [2, 3]}
-snapshot_id = manager.save_snapshot(pytree, metadata={"experiment": "baseline"})
+# Save snapshots
+sid = manager.save_snapshot(
+    {
+        "txt": "hello pytorch",
+        "x": 42,
+    }
+)
 
-# Apply a transformation to the PyTree
-def square_leaf(x):
-    return x ** 2 if isinstance(x, int) else x
+nsid = manager.tree_map(
+    lambda x: x.replace("pytorch", "jax") if isinstance(x, str) else x,
+    snapshot_id=sid,
+)
 
-transformed_pytree = manager.apply_leaf_transformation(snapshot_id, square_leaf)
-print("Transformed PyTree:", transformed_pytree)
-# Output: {'a': 4, 'b': [4, 9]}
+print(manager.get_snapshot(nsid).data)
+# Output: {'txt': 'hello jax', 'x': 42}
 ```
 
-### Managing Snapshots with Tags
+### Persistence
 
-This example shows how to organize snapshots using tags, search for snapshots by tags, and retrieve specific snapshots.
+You can save all snapshots to a file and reload them later for further use:
 
 ```python
 from snapshot_manager import SnapshotManager
@@ -88,45 +96,91 @@ from snapshot_manager import SnapshotManager
 # Initialize the manager
 manager = SnapshotManager()
 
-# Create PyTrees
-pytree1 = {"a": 1, "b": 2}
-pytree2 = {"a": 3, "b": 4}
-pytree3 = {"x": 10, "y": 20}
+# Save some snapshots
+snapshot_id1 = manager.save_snapshot({"a": 1, "b": 2}, metadata={"project": "example1"})
+snapshot_id2 = manager.save_snapshot({"x": 10, "y": 20}, metadata={"project": "example2"})
 
-# Save snapshots with tags
-manager.save_snapshot(pytree1, snapshot_id="snap1", tags=["experiment", "baseline"])
-manager.save_snapshot(pytree2, snapshot_id="snap2", tags=["experiment", "variant"])
-manager.save_snapshot(pytree3, snapshot_id="snap3", tags=["control"])
+# Save all snapshots to a file
+manager.save_to_file("snapshots.pkl")
+print("Snapshots saved to file.")
 
-# Find snapshots by tag
-experiment_snapshots = manager.query.by_tag("experiment")
-print("Experiment Snapshots:", experiment_snapshots)
-# Output: Experiment Snapshots: ['snap1', 'snap2']
+# Reload the snapshots from the file
+new_manager = SnapshotManager.load_from_file("snapshots.pkl")
+print("Snapshots reloaded from file.")
 
-# Retrieve and inspect a snapshot
-snapshot = manager.get_snapshot("snap1")
-print("Snapshot snap1:", snapshot)
-# Output: Snapshot snap1: {'a': 1, 'b': 2}
+# Verify the reloaded snapshots
+retrieved_snapshot = new_manager.get_snapshot(snapshot_id1)
+print("Reloaded Data:", retrieved_snapshot.data)
+# Output: Reloaded Data: {'a': 1, 'b': 2}
 ```
 
-- For advanced query examples, including custom criteria and logical queries, check out the [Query Guide](./query_guide.md) page.
-- Explore the [examples](./examples) folder for a random collection of demos showcasing various features and use cases.
+### Query by Tags
+
+This example shows how to organize and query snapshots using tags.
+
+```python
+from snapshot_manager import SnapshotManager
+
+# Initialize the manager
+manager = SnapshotManager()
+
+# Save snapshots with tags
+manager.save_snapshot({"a": 1, "b": 2}, snapshot_id="snap1", tags=["experiment", "baseline"])
+manager.save_snapshot({"a": 3, "b": 4}, snapshot_id="snap2", tags=["experiment", "variant"])
+manager.save_snapshot({"x": 10, "y": 20}, snapshot_id="snap3", tags=["control"])
+
+# Find snapshots by tag
+experiment_snapshots = manager.query.by_tags("experiment")
+
+print("Experiment Snapshots:", experiment_snapshots)
+# Output: Experiment Snapshots: ['snap1', 'snap2']
+```
+
+For advanced query examples, including custom criteria and logical queries, check out the [Query Guide](./query_guide.md) page.
+
+### Additional Examples
+
+Explore the [examples](./examples) folder for a random collection of demos showcasing various features and use cases.
 
 ## Deepcopy Logic
 
-`SnapshotManager` provides flexibility in how snapshots are saved and retrieved, allowing you to choose between using *deepcopy* or *reference*. By default, snapshots are saved and retrieved using deepcopies to ensure they are isolated from the original data. However, you can override this behavior globally or on a per-operation basis to optimize for performance gains or specific use cases.
+By default, `SnapshotManager` saves and retrieves snapshots as deepcopies, ensuring the stored data is completely isolated from the original. This guarantees that modifications to the original data or the snapshot do not affect each other.
 
-Set the behavior during initialization to apply consistently across all operations:
+However, SnapshotManager also allows for alternative behavior to suit different workflows. You can configure it to save and retrieve data as live references, optimizing for performance in cases where data isolation is unnecessary. This flexibility can be applied globally or customized for specific operations.
+
+You can set the behavior globally during initialization to ensure consistency across all operations.
 
 ```python
 manager = SnapshotManager(deepcopy_on_save=False, deepcopy_on_retrieve=False)
 ```
 
-Override the behavior for specific save or retrieve calls:
+Override the behavior for specific save or retrieve calls. For instance:
 
 ```python
 snapshot = manager.get_snapshot(snapshot_id, deepcopy=False)
 ```
+
+### Accessing Snapshots with `manager[snapshot_id]`
+
+Indexed access to snapshots behaves identically to get_snapshot in terms of deepcopy behavior. It returns either a deepcopy or a reference based on the global `deepcopy_on_retrieve` setting:
+
+```python
+# Equivalent to get_snapshot("snap1")
+snapshot1 = manager["snap1"]  
+```
+
+You can override the global `deepcopy_on_retrieve` setting for a specific retrieval. For instance:
+
+```python
+# Equivalent to get_snapshot("snap1",deepcopy=False) 
+snapshot1 = manager["snap1",deepcopy=False]
+```
+
+## Use Cases
+
+### Reinforcement Learning
+
+Learn how `SnapshotManager` can be integrated into a reinforcement learning pipeline to manage, rank, and experiment with saved network states. This use case closely reflects the original motivation for developing `SnapshotManager`. See the [Reinforcement Learning Use Case](./use_case_rl.md) for details.
 
 ## Roadmap
 
@@ -142,9 +196,9 @@ We warmly welcome contributions and look forward to your pull requests!
 - 2024.11.26
   - Repo renamed to SnapshotManager
 - 2024.11.25
-  - Reinforcement Learning use case added 
+  - Reinforcement Learning use case added
 - 2024.11.24
-  - Deepcopy on Save 
+  - Deepcopy on Save
 - 2024.11.23
   - Refactored
   - Logic Queries

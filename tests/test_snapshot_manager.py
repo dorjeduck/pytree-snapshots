@@ -29,12 +29,14 @@ def test_save_and_retrieve_snapshot(setup_manager):
     snapshot_id = manager.save_snapshot(pytree)
 
     # Retrieve the snapshot
-    retrieved = manager.get_snapshot(snapshot_id)
+    retrieved_snapshot = manager.get_snapshot(snapshot_id)
 
-    # Assertions to verify the integrity of the saved and retrieved PyTree
-    assert jnp.array_equal(retrieved["a"], pytree["a"]), "Array 'a' does not match."
+    # Assertions to verify the integritytests/test_snapshot_manager.py::test_snapshot_metadatatests/test_snapshot_manager.py::test_snapshot_metadata of the saved and retrieved PyTree
     assert jnp.array_equal(
-        retrieved["b"]["x"], pytree["b"]["x"]
+        retrieved_snapshot.data["a"], pytree["a"]
+    ), "Array 'a' does not match."
+    assert jnp.array_equal(
+        retrieved_snapshot.data["b"]["x"], pytree["b"]["x"]
     ), "Array 'b.x' does not match."
 
 
@@ -55,9 +57,9 @@ def test_snapshot_metadata(setup_manager):
     assert updated_metadata["experiment"] == "test"
 
 
-def test_snapshot_tags(setup_manager):
+def test_snapshot_tags():
     """Test adding and removing tags for a snapshot."""
-    manager = setup_manager
+    manager = SnapshotManager()
     pytree = {"a": jnp.array([1, 2, 3])}
 
     # Save the PyTree with initial tags
@@ -99,11 +101,11 @@ def test_snapshot_order_limit(setup_manager):
     oldest_remaining_snapshot = snapshot_order[0]
     oldest_remaining_pytree = manager.get_snapshot(oldest_remaining_snapshot)
     assert (
-        oldest_remaining_pytree["val"] == 1
+        oldest_remaining_pytree.data["val"] == 1
     ), "The oldest snapshot was not removed correctly."
 
 
-def test_save_and_load_state(tmp_path, setup_manager):
+def test_save_and_load_from_file(tmp_path, setup_manager):
     """Test saving and loading the manager state."""
     manager = setup_manager  # Fixture provides a SnapshotManager instance
 
@@ -115,10 +117,10 @@ def test_save_and_load_state(tmp_path, setup_manager):
 
     # Save the manager state to a file
     state_file = tmp_path / "state.pkl"
-    manager.save_state(state_file)
+    manager.save_to_file(state_file)
 
     # Load the state into a new manager
-    loaded_manager = SnapshotManager.load_state(state_file)
+    loaded_manager = SnapshotManager.load_from_file(state_file)
 
     # Validate that the snapshots were correctly restored
     assert len(loaded_manager.storage.snapshots) == len(
@@ -135,10 +137,10 @@ def test_save_and_load_state(tmp_path, setup_manager):
 
     # Validate the contents of the restored snapshots
     assert jnp.array_equal(
-        loaded_manager.get_snapshot(snapshot_id1)["a"], pytree1["a"]
+        loaded_manager.get_snapshot(snapshot_id1).data["a"], pytree1["a"]
     ), "The first snapshot's PyTree content does not match."
     assert jnp.array_equal(
-        loaded_manager.get_snapshot(snapshot_id2)["b"], pytree2["b"]
+        loaded_manager.get_snapshot(snapshot_id2).data["b"], pytree2["b"]
     ), "The second snapshot's PyTree content does not match."
 
 
@@ -232,7 +234,7 @@ def test_remove_snapshot(setup_manager):
 
     # Verify the remaining snapshot is unaffected
     retrieved = manager.get_snapshot(snapshot_id2)
-    assert retrieved["b"] == 2, "Remaining snapshot was affected by removal."
+    assert retrieved.data["b"] == 2, "Remaining snapshot was affected by removal."
 
 
 def test_duplicate_snapshots(setup_manager):
@@ -250,7 +252,7 @@ def test_duplicate_snapshots(setup_manager):
     retrieved1 = manager.get_snapshot(snapshot_id1)
     retrieved2 = manager.get_snapshot(snapshot_id2)
     assert (
-        retrieved1 == retrieved2
+        retrieved1.data == retrieved2.data
     ), "Duplicate snapshots should have identical content."
 
 
@@ -264,10 +266,10 @@ def test_snapshot_order_after_state_restore(tmp_path, setup_manager):
 
     # Save the manager state
     state_file = tmp_path / "state.pkl"
-    manager.save_state(state_file)
+    manager.save_to_file(state_file)
 
     # Restore the state
-    restored_manager = SnapshotManager.load_state(state_file)
+    restored_manager = SnapshotManager.load_from_file(state_file)
 
     # Verify that the snapshot order is preserved
     assert (
@@ -351,7 +353,7 @@ def test_prune_snapshots_by_accuracy():
     manager.save_snapshot({"d": 4}, snapshot_id="snap4", metadata={"accuracy": 0.8})
 
     # Verify that only the top 3 snapshots are retained
-    snapshots = manager.get_ranked_snapshots()
+    snapshots = manager.get_ranked_snapshot_ids()
     assert (
         len(snapshots) == 3
     ), "Number of retained snapshots does not match max_snapshots."
@@ -383,7 +385,7 @@ def test_reject_low_ranked_snapshot():
     manager.save_snapshot({"e": 5}, snapshot_id="snap5", metadata={"accuracy": 0.4})
 
     # Verify that the low-ranked snapshot was not added
-    snapshots = manager.get_ranked_snapshots()
+    snapshots = manager.get_ranked_snapshot_ids()
     assert len(snapshots) == 3, "Number of snapshots exceeds max_snapshots."
     assert "snap5" not in snapshots, "Low-ranked snapshot was incorrectly added."
     assert snapshots == [
@@ -405,19 +407,19 @@ def test_override_deepcopy_on_retrieve():
     retrieved = manager.get_snapshot(snapshot_id, deepcopy=False)
 
     # Modify the retrieved PyTree
-    retrieved["a"].append(4)
+    retrieved.data["a"].append(4)
 
     # Retrieve the snapshot again
     original = manager.get_snapshot(snapshot_id)
 
     # Assert the original and retrieved are not isolated
-    assert original["a"] == [
+    assert original.data["a"] == [
         1,
         2,
         3,
         4,
     ], "Deepcopy override on retrieve did not work correctly."
-    assert retrieved["a"] == [
+    assert retrieved.data["a"] == [
         1,
         2,
         3,
@@ -440,7 +442,7 @@ def test_default_deepcopy_logic():
     retrieved = manager.get_snapshot(snapshot_id)
 
     # Assert the original and retrieved are isolated
-    assert retrieved["a"] == [
+    assert retrieved.data["a"] == [
         1,
         2,
         3,
@@ -463,7 +465,7 @@ def test_override_deepcopy_on_save():
     retrieved = manager.get_snapshot(snapshot_id)
 
     # Assert the original and retrieved are not isolated
-    assert retrieved["a"] == [
+    assert retrieved.data["a"] == [
         1,
         2,
         3,
@@ -471,51 +473,26 @@ def test_override_deepcopy_on_save():
     ], "Deepcopy override on save did not work correctly."
 
 
-def test_update_all_leaf_nodes(setup_manager):
+def test_tree_map():
     """Test updating all snapshots' leaf nodes in place."""
     manager = PyTreeSnapshotManager()
 
-    # Save snapshots
-    manager.save_snapshot({"a": 1, "b": {"x": 2}}, snapshot_id="snap1")
-    manager.save_snapshot({"c": 3, "d": {"y": 4}}, snapshot_id="snap2")
+    sid = manager.save_snapshot(
+        {
+            "txt": "hello pytorch",
+            "x": 42,
+        }
+    )
 
-    # Apply an in-place transformation to all snapshots
-    manager.update_all_leaf_nodes(lambda x: x + 10)
+    nsid = manager.tree_map(
+        lambda x: x.replace("pytorch", "jax") if isinstance(x, str) else x,
+        snapshot_id=sid,
+    )
 
-    # Verify transformations
-    snapshot1 = manager.get_snapshot("snap1", deepcopy=False)
-    snapshot2 = manager.get_snapshot("snap2", deepcopy=False)
-    assert (
-        snapshot1["a"] == 11 and snapshot1["b"]["x"] == 12
-    ), "Snapshot1 not updated correctly."
-    assert (
-        snapshot2["c"] == 13 and snapshot2["d"]["y"] == 14
-    ), "Snapshot2 not updated correctly."
+    assert manager[nsid].data["txt"] == "hello jax"
 
 
-def test_inplace_leaf_transformation(setup_manager):
-    """Test in-place leaf transformation for specific snapshots."""
-    manager = PyTreeSnapshotManager()
-
-    # Save snapshots
-    snapshot_id1 = manager.save_snapshot({"a": 1, "b": {"x": 2}})
-    snapshot_id2 = manager.save_snapshot({"c": 3, "d": {"y": 4}})
-
-    # Apply an in-place transformation to double each leaf value
-    manager.update_leaf_nodes([snapshot_id1, snapshot_id2], lambda x: x * 2)
-
-    # Retrieve the snapshots and verify transformation
-    snapshot1 = manager.get_snapshot(snapshot_id1, deepcopy=False)
-    snapshot2 = manager.get_snapshot(snapshot_id2, deepcopy=False)
-    assert (
-        snapshot1["a"] == 2 and snapshot1["b"]["x"] == 4
-    ), "Snapshot1 not transformed correctly."
-    assert (
-        snapshot2["c"] == 6 and snapshot2["d"]["y"] == 8
-    ), "Snapshot2 not transformed correctly."
-
-
-def test_combine_snapshots_average(setup_manager):
+def test_tree_combine_average():
     """Test combining snapshots using an average function."""
     manager = PyTreeSnapshotManager()
 
@@ -532,9 +509,11 @@ def test_combine_snapshots_average(setup_manager):
     def average_leaves(leaves):
         return sum(leaves) / len(leaves)
 
-    combined_pytree = manager.combine_snapshots(
+    cid = manager.tree_combine(
         snapshot_ids=["snap1", "snap2", "snap3"], combine_fn=average_leaves
     )
+
+    combined_pytree = manager[cid].data
 
     # Verify the combined PyTree
     # Expected result
@@ -545,3 +524,110 @@ def test_combine_snapshots_average(setup_manager):
         assert jnp.array_equal(
             combined_pytree[key], expected_pytree[key]
         ), f"Mismatch for key {key}: {combined_pytree[key]} != {expected_pytree[key]}"
+
+
+def test_by_tags_and_logic():
+    snapshot_manager = SnapshotManager()
+    # Setup: Add snapshots with specific tags
+    snapshot_manager.save_snapshot(
+        {"data": "snapshot1"}, tags=["important", "completed"]
+    )
+    snapshot_manager.save_snapshot({"data": "snapshot2"}, tags=["important"])
+    snapshot_manager.save_snapshot({"data": "snapshot3"}, tags=["completed"])
+
+    # Test: Find snapshots matching all specified tags
+    result = snapshot_manager.query.by_tags(
+        ["important", "completed"], require_all=True
+    )
+
+    # Assert: Only the first snapshot matches all tags
+    assert len(result) == 1
+    assert result[0] == "snapshot1"
+
+
+def test_by_tags_and_logic():
+    snapshot_manager = SnapshotManager()
+
+    # Setup: Add snapshots with specific tags and capture IDs
+    snapshots = {
+        "snapshot1": snapshot_manager.save_snapshot(
+            {"data": "snapshot1"}, tags=["important", "completed"]
+        ),
+        "snapshot2": snapshot_manager.save_snapshot(
+            {"data": "snapshot2"}, tags=["important"]
+        ),
+        "snapshot3": snapshot_manager.save_snapshot(
+            {"data": "snapshot3"}, tags=["completed"]
+        ),
+    }
+
+    # Test: Find snapshots matching all specified tags
+    result = snapshot_manager.query.by_tags(
+        ["important", "completed"], require_all=True
+    )
+
+    # Assert: Only the first snapshot matches all tags
+    assert len(result) == 1
+    assert result[0] == snapshots["snapshot1"]
+
+
+def test_tree_replace(setup_manager):
+    """
+    Test the tree_replace method to ensure it correctly updates snapshot PyTrees.
+    """
+    manager = PyTreeSnapshotManager()
+
+    # Save snapshots with PyTree structures
+    snapshot1 = {"a": jnp.array([1, 2, 3]), "b": jnp.array([4, 5, 6])}
+    snapshot2 = {"c": jnp.array([7, 8, 9]), "d": jnp.array([10, 11, 12])}
+    snap1_id = manager.save_snapshot(snapshot1, snapshot_id="snap1")
+    snap2_id = manager.save_snapshot(snapshot2, snapshot_id="snap2")
+
+    # Define a transformation function
+    def increment_array(x):
+        return x + 1 if isinstance(x, jnp.ndarray) else x
+
+    # Replace trees in all snapshots
+    manager.tree_replace(func=increment_array)
+
+    # Retrieve and validate transformed snapshots
+    transformed_snapshot1 = manager.get_snapshot(snap1_id)
+    transformed_snapshot2 = manager.get_snapshot(snap2_id)
+
+    assert jnp.array_equal(
+        transformed_snapshot1.data["a"], jnp.array([2, 3, 4])
+    ), "Snapshot1 'a' was not correctly transformed."
+    assert jnp.array_equal(
+        transformed_snapshot1.data["b"], jnp.array([5, 6, 7])
+    ), "Snapshot1 'b' was not correctly transformed."
+
+    assert jnp.array_equal(
+        transformed_snapshot2.data["c"], jnp.array([8, 9, 10])
+    ), "Snapshot2 'c' was not correctly transformed."
+    assert jnp.array_equal(
+        transformed_snapshot2.data["d"], jnp.array([11, 12, 13])
+    ), "Snapshot2 'd' was not correctly transformed."
+
+    # Test replacing a specific snapshot
+    def multiply_array(x):
+        return x * 2 if isinstance(x, jnp.ndarray) else x
+
+    manager.tree_replace(func=multiply_array, snapshot_ids="snap1")
+
+    transformed_snapshot1 = manager.get_snapshot(snap1_id)
+    transformed_snapshot2 = manager.get_snapshot(snap2_id)
+
+    assert jnp.array_equal(
+        transformed_snapshot1.data["a"], jnp.array([4, 6, 8])
+    ), "Snapshot1 'a' was not correctly multiplied."
+    assert jnp.array_equal(
+        transformed_snapshot1.data["b"], jnp.array([10, 12, 14])
+    ), "Snapshot1 'b' was not correctly multiplied."
+
+    # Snapshot2 should remain unchanged
+    assert jnp.array_equal(
+        transformed_snapshot2.data["c"], jnp.array([8, 9, 10])
+    ), "Snapshot2 'c' was incorrectly transformed."
+    assert jnp.array_equal(
+        transformed_snapshot2.data["d"], jnp.array([11, 12, 13])
+    ), "Snapshot2 'd' was incorrectly transformed."

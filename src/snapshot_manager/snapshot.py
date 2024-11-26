@@ -1,30 +1,64 @@
 import time
-import pickle
-import zlib
 import copy
+import uuid
 
 
 class Snapshot:
-    def __init__(self, data, metadata=None, tags=None, deepcopy=True):
+    def __init__(self, data, metadata=None, tags=None, deepcopy=True, snapshot_id=None):
         """
         Initialize a Snapshot instance.
 
         Args:
+            id: snapshot id,
             data: The data structure to store in the snapshot.
             metadata (dict, optional): User-defined metadata.
             tags (list, optional): Tags associated with the snapshot.
-            deepcopy (bool, optional): Whether to deepcopy the data when saving.
-
-
+            deepcopy (bool, optional): If True, creates deep copies of the data, metadata, and tags;
+                                        otherwise, stores references.
+            snapshot_id (str, optional): A unique identifier for the snapshot. If not provided, a new ID is generated.
         """
+
+        self.id = snapshot_id or str(uuid.uuid4())
         self.timestamp = time.time()
-        self.metadata = metadata or {}
-        self.tags = list(tags or [])
         self.data = copy.deepcopy(data) if deepcopy else data
+        self.metadata = (
+            copy.deepcopy(metadata) if deepcopy and metadata else (metadata or {})
+        )
+        self.tags = copy.deepcopy(tags) if deepcopy and tags else list(tags or [])
+
+    def get_id(self):
+        """
+        Retrieve the snapshot ID.
+
+        Returns:
+            str: The snapshot's unique identifier.
+        """
+        return self.id
+
+    def clone(self, snapshot_id=None):
+        """
+        Create a deep copy of the entire Snapshot object.
+
+        Args:
+            snapshot_id (str, optional): A unique identifier for the cloned snapshot.
+                                        If not provided, a new ID is generated.
+
+        Returns:
+            Snapshot: A new Snapshot instance with the same data, metadata, tags, and timestamp.
+        """
+        return Snapshot(
+            data=self.data,
+            metadata=self.metadata,
+            tags=self.tags,
+            deepcopy=True,  # Deepcopy will handle all fields internally
+            snapshot_id=snapshot_id
+            or str(uuid.uuid4()),  # Use provided ID or generate a new one
+        )
 
     def to_dict(self):
         """Convert the snapshot to a dictionary for serialization."""
         return {
+            "id": self.id,
             "data": self.data,
             "metadata": self.metadata,
             "tags": self.tags,
@@ -34,10 +68,13 @@ class Snapshot:
     @classmethod
     def from_dict(cls, data):
         """Recreate a snapshot from a dictionary."""
+
         return cls(
             data=data["data"],
+            snapshot_id=data["id"],
             metadata=data.get("metadata"),
             tags=data.get("tags"),
+            deepcopy=False,
         )
 
     def get_data(self, deepcopy=True):
@@ -137,3 +174,12 @@ class Snapshot:
             new_metadata (dict): Metadata to update.
         """
         self.metadata.update(new_metadata)
+
+    def __repr__(self):
+        """
+        Return a string representation of the Snapshot object for debugging and logging.
+        """
+        return (
+            f"Snapshot(id={self.id}, timestamp={self.timestamp}, "
+            f"data={self.data}, metadata={self.metadata}, tags={self.tags})"
+        )

@@ -19,7 +19,7 @@ class LoggingSnapshotQuery(SnapshotQuery):
             and (value is None or snapshot.metadata[key] == value)
         ]
 
-    def by_tag(self, tag):
+    def by_tags(self, tag):
         print(f"Querying by tag: {tag}")
         return [
             snapshot_id
@@ -52,7 +52,7 @@ print("Metadata query results:", manager.query.by_metadata("project", "example1"
 # Querying by metadata: project = example1
 # Metadata query results: ['snap1']
 
-print("Tag query results:", manager.query.by_tag("control"))
+print("Tag query results:", manager.query.by_tags("control"))
 # Output:
 # Querying by tag: control
 # Tag query results: ['snap2']

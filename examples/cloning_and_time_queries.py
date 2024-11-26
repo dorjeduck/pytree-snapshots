@@ -15,9 +15,7 @@ time.sleep(1)  # Ensure a slight delay for distinct timestamps
 snapshot_id2 = manager.save_snapshot(pytree2, metadata={"project": "exp2"})
 
 # Clone the first snapshot
-cloned_snapshot_id = manager.clone_snapshot(
-    snapshot_id1, metadata={"cloned_from": snapshot_id1}
-)
+cloned_snapshot_id = manager.clone_snapshot(snapshot_id=snapshot_id1)
 print(f"Cloned snapshot '{snapshot_id1}' to '{cloned_snapshot_id}'")
 
 # List all snapshots
@@ -32,6 +30,8 @@ end_time = (
 time_range_snapshots = manager.query.by_time_range(start_time, end_time)
 print("Snapshots created in time range:", time_range_snapshots)
 
+
+
 # Retrieve cloned snapshot's PyTree
 cloned_pytree = manager.get_snapshot(cloned_snapshot_id)
-print(f"Cloned PyTree for '{cloned_snapshot_id}':", cloned_pytree)
+print(f"Cloned PyTree for '{cloned_snapshot_id}':", cloned_pytree.id)

@@ -44,9 +44,10 @@ class SnapshotStorage:
         Args:
             snapshot_id (str): The ID of the snapshot to remove.
         """
-        self.ranked_snapshot_order.remove(snapshot_id)
+        if snapshot_id in self.ranked_snapshot_order:
+            self.ranked_snapshot_order.remove(snapshot_id)
 
-    def get_ranked_snapshots(self):
+    def get_ranked_snapshot_ids(self):
         """
         Get the snapshots ordered by the cmp_function or by age if no cmp_function is provided.
 
@@ -57,7 +58,7 @@ class SnapshotStorage:
             return self.ranked_snapshot_order.copy()
         return self.snapshot_order.copy()
 
-    def add_snapshot(self, snapshot_id, snapshot, overwrite=False):
+    def add_snapshot(self,snapshot, overwrite=False):
         """
         Adds a snapshot to storage, optionally overwriting an existing one.
 
@@ -69,15 +70,19 @@ class SnapshotStorage:
         Raises:
             ValueError: If the snapshot ID already exists and `overwrite` is False.
         """
-        if snapshot_id in self.snapshots:
+        
+
+        if snapshot.id in self.snapshots:
             if not overwrite:
                 raise ValueError(
-                    f"Snapshot ID '{snapshot_id}' already exists. Use overwrite=True to update it."
+                    f"Snapshot ID '{snapshot.id}' already exists. Use overwrite=True to update it."
                 )
             # Overwrite existing snapshot
-            self.snapshots[snapshot_id] = snapshot
-            self._remove_ranked(snapshot_id)
-            self._insert_ranked(snapshot_id)
+            self.snapshots[snapshot.id] = snapshot
+
+            if self.cmp_function:
+                self._remove_ranked(snapshot.id)
+                self._insert_ranked(snapshot.id)
 
             return True
         else:
@@ -109,10 +114,10 @@ class SnapshotStorage:
                     return False
 
             # Add the new snapshot
-            self.snapshots[snapshot_id] = snapshot
-            self.snapshot_order.append(snapshot_id)
+            self.snapshots[snapshot.id] = snapshot
+            self.snapshot_order.append(snapshot.id)
             if self.cmp_function:
-                self._insert_ranked(snapshot_id)
+                self._insert_ranked(snapshot.id)
 
             return True
 

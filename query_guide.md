@@ -1,15 +1,15 @@
 # Query Guide
 
-PyTree Snapshots provides a flexible and powerful query system to retrieve snapshots based on various criteria such as metadata, tags, content, and more. This guide demonstrates how to use the query system effectively, from simple queries to complex, nested logical operations.
+`SnapshotManager` provides a flexible and powerful query system to retrieve snapshots based on various criteria such as metadata, tags, content, and more. This guide demonstrates how to use the query system effectively, from simple queries to complex, nested logical operations.
 
 ## Querying Snapshots by Time
 
-Every snapshot saved using SnapshotManager is automatically assigned a timestamp. This timestamp is managed internally and represents the time when the snapshot was saved. You can use the ByTimeRangeQuery to filter snapshots based on these timestamps.
+Every snapshot saved using `SnapshotManager` is automatically assigned a timestamp. This timestamp is managed internally and represents the time when the snapshot was saved. You can use the `ByTimeRangeQuery` to filter snapshots based on these timestamps.
 
 ```python
 import time
-from pytree_snapshots import SnapshotManager
-from pytree_snapshots.query import ByTimeRangeQuery
+from snapshot_manager import SnapshotManager
+from snapshot_manager.query import ByTimeRangeQuery
 
 # Initialize the manager
 manager = SnapshotManager()
@@ -33,14 +33,13 @@ print("Snapshots saved in the last 2 seconds:", results)
 # Output: ['snap3']
 ```
 
-This example shows how to query snapshots where any leaf in the PyTree satisfies a specific condition, such as being greater than a certain value.
 
 ## Custom Criteria for Selecting Snapshots
 
 This example shows how to identify a single snapshot that meets specific user-defined criteria using the `get_snapshot_by_comparator` method. You can use this feature to search for snapshots based on metadata, tags, or other properties, such as finding the snapshot with the highest accuracy, the most associated tags, or the earliest creation time.
 
 ```python
-from pytree_snapshots import SnapshotManager
+from snapshot_manager import SnapshotManager
 
 # Initialize the manager
 manager = SnapshotManager()
@@ -77,8 +76,8 @@ print(f"Oldest snapshot: {oldest_snapshot_id}")
 In this example, we’ll create a custom query class that logs certain query operation for debugging purposes.
 
 ```python
-from pytree_snapshots import SnapshotManager
-from pytree_snapshots.query import SnapshotQuery
+from snapshot_manager import SnapshotManager
+from snapshot_manager.query import SnapshotQuery
 
 class LoggingSnapshotQuery(SnapshotQuery):
     """
@@ -97,7 +96,7 @@ class LoggingSnapshotQuery(SnapshotQuery):
             and (value is None or snapshot.metadata[key] == value)
         ]
 
-    def by_tag(self, tag):
+    def by_tags(self, tag):
         print(f"Querying by tag: {tag}")
         return [
             snapshot_id
@@ -130,7 +129,7 @@ print("Metadata query results:", manager.query.by_metadata("project", "example1"
 # Querying by metadata: project = example1
 # Metadata query results: ['snap1']
 
-print("Tag query results:", manager.query.by_tag("control"))
+print("Tag query results:", manager.query.by_tags("control"))
 # Output:
 # Querying by tag: control
 # Tag query results: ['snap2']
@@ -142,8 +141,8 @@ print("Tag query results:", manager.query.by_tag("control"))
 This example demonstrates how to combine logical operations (AND, OR, NOT) to create complex, nested queries. You can use these queries to filter snapshots based on metadata, tags, content, or other custom criteria.
 
 ```python
-from pytree_snapshots import SnapshotManager
-from pytree_snapshots.query import AndQuery, OrQuery, NotQuery ByMetadataQuery, ByTagQuery
+from snapshot_manager import SnapshotManager
+from snapshot_manager.query import AndQuery, OrQuery, NotQuery ByMetadataQuery, ByTagQuery
 
 # Initialize the manager
 manager = SnapshotManager()
@@ -178,8 +177,10 @@ print("Snapshots matching the logical query:", results)
 
 ## Querying Snapshots by PyTree Leaf Values
 
+This example shows how to query snapshots where any leaf in the PyTree satisfies a specific condition, such as being greater than a certain value.
+
 ```python
-from pytree_snapshots import PyTreeSnapshotManager
+from snapshot_manager import PyTreeSnapshotManager
 
 # Initialize the PyTree manager
 manager = PyTreeSnapshotManager()

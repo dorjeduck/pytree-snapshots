@@ -11,9 +11,9 @@ manager.save_snapshot({"a": 3, "b": 4}, snapshot_id="snap3")
 
 # Query for snapshots with identical content as a reference snapshot
 reference_snapshot_id = "snap1"
-reference_content = manager.get_snapshot(reference_snapshot_id)
+reference_snapshot = manager.get_snapshot(reference_snapshot_id)
 
-query = ByContentQuery(lambda pytree: pytree == reference_content)
+query = ByContentQuery(lambda pytree: pytree == reference_snapshot.data)
 duplicates = manager.query.evaluate(query)
 
 print("Duplicate snapshots:", duplicates)

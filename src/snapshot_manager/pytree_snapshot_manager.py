@@ -1,6 +1,7 @@
 import uuid
 import jax
 
+from .snapshot_persistence import SnapshotPersistence
 from .snapshot_manager import SnapshotManager
 from .pytree_snapshot import PyTreeSnapshot
 from .query import PyTreeSnapshotQuery, PyTreeSnapshotQueryInterface
@@ -30,115 +31,153 @@ class PyTreeSnapshotManager(SnapshotManager):
 
         super().__init__(*args, query_class=query_class, **kwargs)
 
-    def save_snapshot(
-        self,
-        pytree,
-        snapshot_id=None,
-        metadata=None,
-        tags=None,
-        overwrite=False,
-    ):
+    def tree_map(self, func, snapshot_id, is_leaf=None, new_id=None):
         """
-        Save a PyTree snapshot.
+        Apply a transformation function to the PyTree of a specified snapshot and save it as a new snapshot.
 
         Args:
-            pytree: The PyTree to save.
-            snapshot_id (str, optional): A unique identifier for the snapshot. If None, a new UUID is generated.
-            metadata (dict, optional): Metadata to associate with the snapshot.
-            tags (list, optional): Tags to associate with the snapshot.
-            overwrite (bool): Whether to overwrite an existing snapshot.
-
-        Returns:
-            str: The ID of the saved snapshot.
-        """
-        snapshot_id = snapshot_id or str(uuid.uuid4())
-
-        snapshot = PyTreeSnapshot(pytree, metadata, tags)
-        self.storage.add_snapshot(snapshot_id, snapshot, overwrite=overwrite)
-        return snapshot_id
-
-    def update_leaf_nodes(self, snapshot_ids, func):
-        """
-        Apply a transformation function to one or more snapshots' PyTrees.
-
-        Args:
-            snapshot_ids (str or list): The ID(s) of the snapshot(s) to transform.
             func (callable): A function to apply to each leaf of the PyTree.
+                            The function should take a single argument (leaf) and return the transformed leaf.
+            snapshot_id (str): The ID of the snapshot whose PyTree will be transformed.
+            is_leaf (callable, optional): A function that determines whether an element in the PyTree is a leaf.
+                                        If None, the default leaf-detection logic is used.
+            new_id (str, optional): A custom ID for the new snapshot. If None, a new UUID is generated.
 
         Returns:
-            Transformed PyTree or list of transformed PyTrees.
-        """
-
-        if isinstance(snapshot_ids, str):
-            # Single snapshot case
-            snapshot = self.storage.get_snapshot(snapshot_ids)
-            if not isinstance(snapshot, PyTreeSnapshot):
-                raise TypeError("Snapshot is not a PyTreeSnapshot.")
-            snapshot.update_leaf_nodes(func)
-
-        elif isinstance(snapshot_ids, list):
-            # Multiple snapshots case
-            for snapshot_id in snapshot_ids:
-                snapshot = self.storage.get_snapshot(snapshot_id)
-                if not isinstance(snapshot, PyTreeSnapshot):
-                    raise TypeError(
-                        f"Snapshot with ID {snapshot_id} is not a PyTreeSnapshot."
-                    )
-                snapshot.update_leaf_nodes(func)
-
-        else:
-            raise TypeError(
-                "snapshot_ids must be a string (single ID) or a list of strings (multiple IDs)."
-            )
-
-    def update_all_leaf_nodes(self, func):
-        """
-        Apply a transformation function to all snapshots' PyTrees currently managed.
-
-        Args:
-            func (callable): A function to apply to each leaf of all PyTrees.
+            str: The ID of the newly created snapshot.
 
         Raises:
-            TypeError: If any snapshot is not a PyTreeSnapshot.
-        """
-        for snapshot_id in self.storage.snapshots.keys():
-            snapshot = self.storage.get_snapshot(snapshot_id)
-            if not isinstance(snapshot, PyTreeSnapshot):
-                raise TypeError(
-                    f"Snapshot with ID {snapshot_id} is not a PyTreeSnapshot."
+            TypeError: If the specified snapshot is not a PyTreeSnapshot.
+
+        Examples:
+            Apply a transformation to the leaves of a snapshot's PyTree:
+                new_snapshot_id = manager.tree_map(
+                    func=lambda x: x * 2,
+                    snapshot_id="snapshot123"
                 )
-            snapshot.update_leaf_nodes(func)
 
-    def combine_snapshots(self, snapshot_ids=None, combine_fn=None):
+            Customize leaf detection:
+                new_snapshot_id = manager.tree_map(
+                    func=lambda x: x * 2,
+                    snapshot_id="snapshot123",
+                    is_leaf=lambda x: isinstance(x, dict)
+                )
         """
-        Combine multiple snapshots into a single PyTree using a custom function.
+        # Retrieve the original snapshot
+        snapshot = self.storage.get_snapshot(snapshot_id)
+        if not isinstance(snapshot, PyTreeSnapshot):
+            raise TypeError("Snapshot is not a PyTreeSnapshot.")
+
+        # Use the PyTreeSnapshot's tree_map method to create a new snapshot
+        new_snapshot = snapshot.tree_map(func, is_leaf=is_leaf, new_id=new_id)
+
+        # Optionally save the new snapshot to storage
+        self.storage.add_snapshot(new_snapshot)
+
+        return new_snapshot.id
+
+    def tree_replace(self, func, snapshot_ids=None, is_leaf=None):
+        """
+        Apply a transformation function to the PyTree(s) of specified snapshots and replace them in the storage.
 
         Args:
-            snapshot_ids (list, optional): IDs of the snapshots to combine.
-                                           If None, combine all snapshots.
-            combine_fn (callable): A function that takes a list of leaves (one from each snapshot)
-                                   and returns a single combined leaf.
-
-        Returns:
-            Combined PyTree with the same structure as the snapshots.
+            func (callable): A function to apply to each leaf of the PyTree.
+                            The function should take a single argument (leaf) and return the transformed leaf.
+            snapshot_ids (str, list, or None, optional): A single snapshot ID, a list of snapshot IDs, or None.
+                                                        If None, all snapshots in storage will be affected.
+            is_leaf (Callable[[Any], bool], optional): A function to determine custom leaf nodes. Defaults to None.
 
         Raises:
-            TypeError: If snapshots are not PyTreeSnapshots or structures do not match.
-            ValueError: If combine_fn is not provided.
+            TypeError: If a snapshot is not a PyTreeSnapshot.
+
+        Examples:
+            Replace all snapshots with a transformation applied:
+                manager.tree_replace(func=lambda x: x + 1)
+
+            Replace a specific snapshot:
+                manager.tree_replace(
+                    func=lambda x: x * 2,
+                    snapshot_ids="snapshot123"
+                )
+
+            Replace multiple snapshots with custom leaf detection:
+                manager.tree_replace(
+                    func=lambda x: x.lower(),
+                    snapshot_ids=["snapshot123", "snapshot456"],
+                    is_leaf=lambda x: isinstance(x, str)
+                )
         """
+        # Normalize snapshot_ids into a list
+        if isinstance(snapshot_ids, str):
+            snapshot_ids = [snapshot_ids]
+        elif snapshot_ids is None:
+            snapshot_ids = self.storage.snapshot_order
+
+        for snap_id in snapshot_ids:
+            # Retrieve the snapshot
+            snapshot = self.storage.get_snapshot(snap_id)
+            if not isinstance(snapshot, PyTreeSnapshot):
+                raise TypeError(f"Snapshot {snap_id} is not a PyTreeSnapshot.")
+
+            # Replace the PyTree in the existing snapshot
+            snapshot.data = jax.tree_util.tree_map(func, snapshot.data, is_leaf=is_leaf)
+
+            # Update the snapshot in storage
+            self.storage.add_snapshot(snapshot=snapshot, overwrite=True)
+
+    def tree_combine(self, snapshot_ids=None, combine_fn=None, new_id=None):
+        """
+        Combine multiple snapshots' PyTrees into a single PyTree using a custom function,
+        and save the result as a new snapshot.
+
+        Args:
+            snapshot_ids (list or None, optional): A list of IDs of the snapshots to combine.
+                                                If None, all snapshots in storage are used.
+            combine_fn (callable): A function to combine corresponding leaves of the PyTrees.
+                                This function takes a list of values (one from each snapshot)
+                                and returns a single combined value.
+            new_id (str or None, optional): An optional custom ID for the new snapshot.
+                                            If None, a new UUID is generated.
+
+        Returns:
+            str: The ID of the newly created snapshot.
+
+        Raises:
+            ValueError: If `combine_fn` is not provided.
+            TypeError: If the snapshots are not PyTreeSnapshots or their structures do not match.
+
+        Examples:
+            Combine all snapshots with an addition operation:
+                new_id = manager.tree_combine(
+                    combine_fn=lambda leaves: sum(leaves)
+                )
+
+            Combine specific snapshots:
+                new_id = manager.tree_combine(
+                    snapshot_ids=["snapshot1", "snapshot2"],
+                    combine_fn=lambda leaves: max(leaves)
+                )
+
+            Combine snapshots with a custom ID:
+                new_id = manager.tree_combine(
+                    snapshot_ids=["snapshot1", "snapshot2"],
+                    combine_fn=lambda leaves: leaves[0] + 10,
+                    new_id="custom_id"
+                )
+        """
+
         if combine_fn is None:
-            raise ValueError("A combine_fn must be provided to combine snapshots.")
+            raise ValueError("A combine_fn must be provided to combine PyTrees.")
 
         # Select snapshots to combine
         snapshot_ids = snapshot_ids or self.storage.snapshot_order
         pytree_list = [
-            self.storage.get_snapshot(snapshot_id).data
-            for snapshot_id in snapshot_ids
+            self.storage.get_snapshot(snapshot_id).data for snapshot_id in snapshot_ids
         ]
 
         # Ensure all PyTrees have the same structure
         flattened, structure = zip(
-            *[jax.tree.flatten(pytree) for pytree in pytree_list]
+            *[jax.tree_util.tree_flatten(pytree) for pytree in pytree_list]
         )
         if not all(structure[0] == s for s in structure):
             raise TypeError("All snapshots must have the same PyTree structure.")
@@ -147,5 +186,60 @@ class PyTreeSnapshotManager(SnapshotManager):
         combined_leaves = [combine_fn(leaves) for leaves in zip(*flattened)]
 
         # Reconstruct the combined PyTree
-        combined_pytree = jax.tree.unflatten(structure[0], combined_leaves)
-        return combined_pytree
+        combined_pytree = jax.tree_util.tree_unflatten(structure[0], combined_leaves)
+
+        # Create and save the new snapshot
+        new_snapshot = PyTreeSnapshot(combined_pytree, snapshot_id=new_id)
+
+        self.storage.add_snapshot(new_snapshot)
+
+        return new_snapshot.id
+
+    @staticmethod
+    def load_from_file(file_path):
+        """
+        Load a PyTreeSnapshotManager state from a file.
+
+        Args:
+            file_path (str): The file path of the saved state to load.
+
+        Returns:
+            PyTreeSnapshotManager: An instance of `PyTreeSnapshotManager` with the loaded state.
+
+        Raises:
+            FileNotFoundError: If the specified file does not exist.
+            IOError: If there is an error reading the file.
+            ValueError: If the file contents cannot be deserialized into the expected state.
+
+        Examples:
+            Load a manager state from a saved file:
+                manager = PyTreeSnapshotManager.load_from_file("snapshots_state.json")
+
+            Access snapshots from the loaded manager:
+                snapshot = manager.get_snapshot("snapshot_id")
+        """
+        return SnapshotPersistence.load_from_file(
+            file_path, PyTreeSnapshotManager, PyTreeSnapshot
+        )
+
+    def _create_snapshot(self, data, metadata, tags, deepcopy, snapshot_id):
+        """
+        Override the factory method to create a PyTreeSnapshot.
+
+        Args:
+            data: The data to store in the PyTreeSnapshot.
+            metadata (dict): Metadata to associate with the snapshot.
+            tags (list): Tags to associate with the snapshot.
+            deepcopy (bool): Whether to deepcopy the data.
+            snapshot_id (str): Identifier for the Snapshot.
+
+        Returns:
+            PyTreeSnapshot: The created PyTreeSnapshot instance.
+        """
+        return PyTreeSnapshot(
+            data,
+            metadata=metadata,
+            tags=tags,
+            deepcopy=deepcopy,
+            snapshot_id=snapshot_id,
+        )

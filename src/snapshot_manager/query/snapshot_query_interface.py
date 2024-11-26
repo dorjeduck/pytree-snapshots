@@ -21,7 +21,7 @@ class SnapshotQueryInterface(ABC):
         pass
 
     @abstractmethod
-    def by_tag(self, tag):
+    def by_tags(self, tag):
         """
         Find snapshots by a specific tag.
 
