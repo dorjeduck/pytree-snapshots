@@ -193,6 +193,8 @@ We warmly welcome contributions and look forward to your pull requests!
 
 ## Changelog
 
+- 2024.11.27
+  - Beta Release
 - 2024.11.26
   - Repo renamed to SnapshotManager
 - 2024.11.25
