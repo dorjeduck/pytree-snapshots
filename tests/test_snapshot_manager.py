@@ -486,12 +486,12 @@ def test_tree_map():
         }
     )
 
-    nsid = manager.tree_map(
+    new_pytree = manager.tree_map(
         lambda x: x.replace("pytorch", "jax") if isinstance(x, str) else x,
-        snapshot_id=sid,
+        snapshot_ids=sid,
     )
 
-    assert manager[nsid].data["txt"] == "hello jax"
+    assert new_pytree["txt"] == "hello jax"
 
 
 def test_tree_combine_average():
@@ -511,11 +511,10 @@ def test_tree_combine_average():
     def average_leaves(leaves):
         return sum(leaves) / len(leaves)
 
-    cid = manager.tree_combine(
+    combined_pytree = manager.tree_combine(
         snapshot_ids=["snap1", "snap2", "snap3"], combine_fn=average_leaves
     )
 
-    combined_pytree = manager[cid].data
 
     # Verify the combined PyTree
     # Expected result

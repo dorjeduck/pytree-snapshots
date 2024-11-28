@@ -268,37 +268,6 @@ class SnapshotManager:
 
         return self.storage.remove_snapshot(snapshot_id)
 
-    def clone_snapshot(self, snapshot_id):
-        """
-        Create a clone of an existing Snapshot and add it to storage.
-
-        The cloned Snapshot will have a new unique ID but retain the same data, metadata, and tags
-        as the original. It is stored in the manager with the same settings as any new Snapshot.
-
-        Args:
-            snapshot_id (str): The unique ID of the Snapshot to clone.
-
-        Returns:
-            str: The ID of the newly created cloned Snapshot.
-
-        Raises:
-            ValueError: If the provided `snapshot_id` does not exist in storage.
-
-        Examples:
-            Clone an existing Snapshot:
-                new_snapshot_id = manager.clone_snapshot("existing_snapshot_id")
-                print(f"Cloned snapshot ID: {new_snapshot_id}")
-        """
-
-        # Retrieve the original snapshot by reference
-        original_snapshot = self.storage.get_snapshot(snapshot_id)
-
-        # Clone the snapshot to create an independent copy
-        cloned_snapshot = original_snapshot.clone()
-
-        self.storage.add_snapshot(cloned_snapshot)
-        return cloned_snapshot.id
-
     def get_metadata(self, snapshot_id):
         """
         Retrieve the metadata associated with a specific Snapshot.

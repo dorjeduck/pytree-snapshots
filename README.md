@@ -67,23 +67,40 @@ For `JAX` users, here’s an example demonstrating PyTree-specific functionality
 ```python
 from snapshot_manager import PyTreeSnapshotManager
 
+# Initialize the manager
 manager = PyTreeSnapshotManager()
 
-# Save snapshots
-sid = manager.save_snapshot(
+# Save the first snapshot
+manager.save_snapshot(
     {
         "txt": "hello pytorch",
         "x": 42,
-    }
+    },
+    snapshot_id="snap1",
 )
 
-nsid = manager.tree_map(
+# Save the second snapshot
+manager.save_snapshot(
+    {
+        "txt": "pytorch rocks",
+        "y": 37,
+    },
+    snapshot_id="snap2",
+)
+
+# Apply the `tree_map` function to modify both snapshots
+pytrees = manager.tree_map(
     lambda x: x.replace("pytorch", "jax") if isinstance(x, str) else x,
-    snapshot_id=sid,
+    snapshot_ids=["snap1", "snap2"],  # Specify a list of snapshot IDs
 )
 
-print(manager.get_snapshot(nsid).data)
-# Output: {'txt': 'hello jax', 'x': 42}
+# Output the results
+for i, pytree in enumerate(pytrees, start=1):
+    print(f"Modified PyTree for snap{i}: {pytree}")
+
+# Outputs:
+# Modified PyTree for snap1: {'txt': 'hello jax', 'x': 42}
+# Modified PyTree for snap2: {'txt': 'jax rocks', 'y': 37}
 ```
 
 ### Persistence
