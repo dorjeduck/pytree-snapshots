@@ -19,7 +19,7 @@ def cmp_by_reward(snapshot1, snapshot2):
 
 # Initialize the SnapshotManager with a maximum snapshot limit and ranking function
 snapshot_manager = SnapshotManager(
-    max_snapshots=MAX_SNAPSHOTS, cmp_function=cmp_by_reward
+    max_snapshots=MAX_SNAPSHOTS, cmp=cmp_by_reward
 )
 
 # Save a snapshot of the policy network and its metadata
@@ -41,7 +41,7 @@ else:
 After training, we analyze the saved network states associated with the top-performing snapshots:
 
 ```python
-ranked_snapshots = snapshot_manager.get_ranked_snapshot_ids()
+ranked_snapshots = snapshot_manager.get_ids_by_rank()
 print(f"Top {MAX_SNAPSHOTS} Snapshots by Reward:")
 for snapshot_id in ranked_snapshots:
     metadata = snapshot_manager.get_metadata(snapshot_id)

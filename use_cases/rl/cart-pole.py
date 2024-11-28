@@ -221,9 +221,7 @@ def cmp_by_reward(snapshot1, snapshot2):
     return snapshot1.metadata["reward"] - snapshot2.metadata["reward"]
 
 
-snapshot_manager = SnapshotManager(
-    max_snapshots=MAX_SNAPSHOTS, cmp_function=cmp_by_reward
-)
+snapshot_manager = SnapshotManager(max_snapshots=MAX_SNAPSHOTS, cmp=cmp_by_reward)
 
 printed_dot_last = False
 
@@ -290,7 +288,7 @@ for i_episode in range(num_episodes):
 
 
 # Retrieve and print the top snapshots
-ranked_snapshots = snapshot_manager.get_ranked_snapshot_ids()
+ranked_snapshots = snapshot_manager.get_ids_by_rank()
 print(f"\n\nTop {MAX_SNAPSHOTS} Snapshots by Reward:")
 for snapshot_id in ranked_snapshots:
     metadata = snapshot_manager.get_metadata(snapshot_id)

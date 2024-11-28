@@ -112,7 +112,7 @@ def cmp_by_accuracy(snapshot1, snapshot2):
 
 
 ptsm = PyTreeSnapshotManager(
-    deepcopy_on_retrieve=False, max_snapshots=5, cmp_function=cmp_by_accuracy
+    deepcopy_on_retrieve=False, max_snapshots=5, cmp=cmp_by_accuracy
 )
 
 
@@ -154,7 +154,7 @@ for epoch in range(NUM_EPOCHS):
     )
 
 # Retrieve and print the ranked list of snapshots
-ranked_snapshots = ptsm.get_ranked_snapshot_ids()
+ranked_snapshots = ptsm.get_ids_by_rank()
 
 print("\nFive Snapshots with the highest accuracy:")
 for snapshot_id in ranked_snapshots:

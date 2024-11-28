@@ -111,7 +111,7 @@ class PyTreeSnapshotManager(SnapshotManager):
         if isinstance(snapshot_ids, str):
             snapshot_ids = [snapshot_ids]
         elif snapshot_ids is None:
-            snapshot_ids = self.storage.snapshot_order
+            snapshot_ids = self.storage.insertion_order
 
         for snap_id in snapshot_ids:
             # Retrieve the snapshot
@@ -170,7 +170,7 @@ class PyTreeSnapshotManager(SnapshotManager):
             raise ValueError("A combine_fn must be provided to combine PyTrees.")
 
         # Select snapshots to combine
-        snapshot_ids = snapshot_ids or self.storage.snapshot_order
+        snapshot_ids = snapshot_ids or self.storage.insertion_order
         pytree_list = [
             self.storage.get_snapshot(snapshot_id).data for snapshot_id in snapshot_ids
         ]

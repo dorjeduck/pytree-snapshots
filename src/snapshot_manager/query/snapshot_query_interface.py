@@ -48,15 +48,15 @@ class SnapshotQueryInterface(ABC):
         pass
 
     @abstractmethod
-    def by_comparator(self, comparator):
+    def by_cmp(self, cmp):
         """
-        Find a snapshot using a custom comparator.
+        Find a snapshot using a custom cmp.
 
         Args:
-            comparator (callable): A function to compare snapshots.
+            cmp (callable): A function to compare snapshots.
 
         Returns:
-            str: The ID of the snapshot that satisfies the comparator.
+            str: The ID of the snapshot that satisfies the cmp.
         """
         pass
 

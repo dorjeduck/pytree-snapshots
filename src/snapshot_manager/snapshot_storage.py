@@ -1,129 +1,136 @@
+from .utils import RankedList, RankedListAddResult
+
+
 class SnapshotStorage:
-    def __init__(self, max_snapshots=None, cmp_function=None):
+    def __init__(self, max_snapshots=None, cmp=None):
         """
         Manages storage of PyTree snapshots.
 
         Args:
             max_snapshots (int, optional): Maximum number of snapshots to store. Defaults to None (no limit).
-            cmp_function (callable, optional): Comparison function to order snapshots.
-                                               Should take two snapshots and return:
-                                               - Negative value if snapshot1 < snapshot2
-                                               - 0 if snapshot1 == snapshot2
-                                               - Positive value if snapshot1 > snapshot2
+            cmp (callable, optional): Comparison function to order snapshots. Defaults to None.
         """
-        self.snapshots = {}
-        self.snapshot_order = []  # List of snapshot IDs in insertion order
-        self.ranked_snapshot_order = []  # List of snapshot IDs ordered by cmp_function
         self.max_snapshots = max_snapshots
-        self.cmp_function = cmp_function
+        self.snapshots = {}  # Mapping of snapshot_id to snapshot objects
+        self.insertion_order = []  # Maintains insertion order
+        self.ranked_list = (
+            None
+            if cmp is None
+            else RankedList(
+                cmp=cmp,
+                max_items=max_snapshots,
+            )
+        )
 
-    def _insert_ranked(self, snapshot_id):
-        """
-        Insert a snapshot ID into the ranked_snapshot_order using the cmp_function for ranking.
-
-        Args:
-            snapshot_id (str): The ID of the snapshot to insert.
-        """
-        if not self.cmp_function:
-            raise ValueError("A cmp_function must be provided to use ranked order.")
-
-        # Perform manual binary search to find the correct position
-        position = 0
-        for idx, sid in enumerate(self.ranked_snapshot_order):
-            if self.cmp_function(self.snapshots[snapshot_id], self.snapshots[sid]) > 0:
-                position = idx
-                break
-            position += 1
-
-        self.ranked_snapshot_order.insert(position, snapshot_id)
-
-    def _remove_ranked(self, snapshot_id):
-        """
-        Remove a snapshot ID from the ranked_snapshot_order.
-
-        Args:
-            snapshot_id (str): The ID of the snapshot to remove.
-        """
-        if snapshot_id in self.ranked_snapshot_order:
-            self.ranked_snapshot_order.remove(snapshot_id)
-
-    def get_ranked_snapshot_ids(self):
-        """
-        Get the snapshots ordered by the cmp_function or by age if no cmp_function is provided.
-
-        Returns:
-            list: A list of snapshot IDs ordered based on the cmp_function or age.
-        """
-        if self.cmp_function:
-            return self.ranked_snapshot_order.copy()
-        return self.snapshot_order.copy()
-
-    def add_snapshot(self,snapshot, overwrite=False):
+    def add_snapshot(self, snapshot, overwrite=False):
         """
         Adds a snapshot to storage, optionally overwriting an existing one.
 
         Args:
-            snapshot_id (str): The ID of the snapshot.
-            snapshot (Snapshot): The Snapshot object to store.
+            snapshot (Snapshot): The snapshot to store.
             overwrite (bool): Whether to overwrite an existing snapshot. Defaults to False.
 
-        Raises:
-            ValueError: If the snapshot ID already exists and `overwrite` is False.
+        Returns:
+            bool: True if the snapshot was added, False otherwise.
         """
-        
 
+        # Handle overwrites
         if snapshot.id in self.snapshots:
             if not overwrite:
                 raise ValueError(
                     f"Snapshot ID '{snapshot.id}' already exists. Use overwrite=True to update it."
                 )
-            # Overwrite existing snapshot
+                # Overwrite snapshot
             self.snapshots[snapshot.id] = snapshot
 
-            if self.cmp_function:
-                self._remove_ranked(snapshot.id)
-                self._insert_ranked(snapshot.id)
+            # Ensure ranked list reflects possible changes in ranking
+            if self.ranked_list:
+                self.ranked_list.sort_items()
 
+            # Do not modify insertion_order on overwrite
             return True
+
+        if self.ranked_list:
+            result = self.ranked_list.add(snapshot)
+            if result == RankedListAddResult.NOT_QUALIFIED:
+                return False  # Snapshot doesn't meet ranking criteria
+
+        # Add to snapshot storage
+        self.snapshots[snapshot.id] = snapshot
+        self.insertion_order.append(snapshot.id)
+
+        # Maintain ordered list
+        if (
+            self.max_snapshots is not None
+            and len(self.insertion_order) > self.max_snapshots
+        ):
+            oldest_id = self.insertion_order.pop(0)
+            del self.snapshots[oldest_id]
+
+        return True
+
+    def remove_snapshot(self, snapshot_id):
+        """
+        Removes a snapshot by its ID.
+
+        Args:
+            snapshot_id (str): The ID of the snapshot to remove.
+
+        Returns:
+            bool: True if the snapshot was removed, False if it did not exist.
+        """
+        snapshot = self.snapshots.pop(snapshot_id, None)
+        if snapshot is None:
+            return False
+
+        self.insertion_order.remove(snapshot_id)
+        if self.ranked_list:
+            self.ranked_list.remove(snapshot)
+
+        return True
+
+    def update_cmp(self, cmp):
+        """
+        Updates the cmp function and transitions to a ranked list.
+
+        Args:
+            cmp (callable): A new cmp function. If None, disables ranking.
+        """
+        self.cmp = cmp
+        if cmp is None:
+            # Disable ranking by setting ranked_list to None
+            self.ranked_list = None
         else:
-            # Handle max_snapshots limit
-            if (
+            # Re-sort the existing ranked list with the updated cmp
+
+            self.ranked_list = RankedList(
+                cmp=cmp,
+                max_items=self.max_snapshots,
+            )
+            for snapshot in self.snapshots.values():
+                self.ranked_list.add(snapshot)
+
+    def update_max_snapshots(self, max_snapshots):
+        """
+        Updates the maximum number of snapshots and enforces the limit.
+
+        Args:
+            max_snapshots (int): The new maximum number of snapshots.
+        """
+        self.max_snapshots = max_snapshots
+        if self.ranked_list:
+            self.ranked_list.update_max_items(max_snapshots)
+        else:
+            while (
                 self.max_snapshots is not None
-                and len(self.snapshots) >= self.max_snapshots
+                and len(self.insertion_order) > self.max_snapshots
             ):
-                # Get the lowest-ranked snapshot (last in ranked_snapshot_order)
-                lowest_snapshot_id = (
-                    self.ranked_snapshot_order[-1]
-                    if self.cmp_function
-                    else self.snapshot_order[0]
-                )
-                lowest_snapshot = self.snapshots[lowest_snapshot_id]
-
-                # Compare the new snapshot to the lowest-ranked snapshot
-                if (
-                    self.cmp_function
-                    and self.cmp_function(snapshot, lowest_snapshot) > 0
-                ):
-                    # New snapshot is better; remove the lowest one
-                    self.remove_snapshot(lowest_snapshot_id)
-                elif not self.cmp_function:
-                    # If no cmp_function, enforce insertion order (remove oldest)
-                    self.remove_snapshot(self.snapshot_order[0])
-                else:
-                    # New snapshot is not better; do not add
-                    return False
-
-            # Add the new snapshot
-            self.snapshots[snapshot.id] = snapshot
-            self.snapshot_order.append(snapshot.id)
-            if self.cmp_function:
-                self._insert_ranked(snapshot.id)
-
-            return True
+                oldest_id = self.insertion_order.pop(0)
+                del self.snapshots[oldest_id]
 
     def get_snapshot(self, snapshot_id):
         """
-        Retrieve a snapshot by its ID.
+        Retrieves a snapshot by its ID.
 
         Args:
             snapshot_id (str): The ID of the snapshot to retrieve.
@@ -136,23 +143,29 @@ class SnapshotStorage:
             raise KeyError(f"Snapshot with ID {snapshot_id} not found.")
         return snapshot
 
-    def remove_snapshot(self, snapshot_id):
+    def get_ids_by_rank(self):
         """
-        Removes a snapshot by its ID.
-
-        Args:
-            snapshot_id (str): The ID of the snapshot to remove.
+        Get the snapshots ordered by the cmp function.
 
         Returns:
-            bool: True if the snapshot was removed, False if it did not exist.
+            list: A list of snapshot IDs ordered by ranking or insertion order.
         """
-        if snapshot_id in self.snapshots:
-            del self.snapshots[snapshot_id]
-            self.snapshot_order.remove(snapshot_id)
-            if self.cmp_function:
-                self._remove_ranked(snapshot_id)
-            return True
-        return False
+        if self.ranked_list:
+            return [snapshot.id for snapshot in self.ranked_list.get_items()]
+        return self.insertion_order.copy()
+
+    def get_ids_by_insertion_order(self):
+        """
+        Retrieve a list of snapshot IDs in the order they were added.
+
+        This method returns the snapshot IDs in the exact sequence they were created or added
+        to the manager. Unlike ranked snapshots, this order is based purely on the creation
+        or insertion order, unaffected by any cmp or ranking logic.
+
+        Returns:
+            list[str]: A list of snapshot IDs ordered by their insertion sequence.
+        """
+        return self.insertion_order.copy()
 
     def has_snapshot(self, snapshot_id):
         """
@@ -165,3 +178,17 @@ class SnapshotStorage:
             bool: True if the snapshot exists, False otherwise.
         """
         return snapshot_id in self.snapshots
+
+    def resort(self):
+        """
+        Re-sorts the ranked list of snapshots.
+
+        This method ensures the ranked list is updated and sorted according to the
+        current comparator function. If no ranked list is maintained (i.e., cmp is None),
+        this method has no effect.
+
+        Returns:
+            None
+        """
+        if self.ranked_list:
+            self.ranked_list.sort_items()

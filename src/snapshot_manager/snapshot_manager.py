@@ -19,7 +19,7 @@ class SnapshotManager:
         deepcopy_on_retrieve=True,
         query_class=None,
         max_snapshots=None,
-        cmp_function=None,
+        cmp=None,
     ):
         """
         Initialize the SnapshotManager.
@@ -29,15 +29,13 @@ class SnapshotManager:
             deepcopy_on_retrieve (bool): Whether to return deep copies of PyTrees when retrieving snapshots. Defaults to True.
             query_class (type, optional): A class implementing SnapshotQueryInterface. Defaults to SnapshotQuery.
             max_snapshots (int, optional): Maximum number of snapshots to store. Defaults to None (no limit).
-            cmp_function (callable, optional): A comparison function to order snapshots, also used to decide which snapshot to remove
+            cmp (callable, optional): A comparison function to order snapshots, also used to decide which snapshot to remove
                                             when the storage limit is reached. Defaults to None.
         """
         if query_class and not issubclass(query_class, SnapshotQueryInterface):
             raise TypeError("query_class must implement SnapshotQueryInterface.")
 
-        self.storage = SnapshotStorage(
-            max_snapshots=max_snapshots, cmp_function=cmp_function
-        )
+        self.storage = SnapshotStorage(max_snapshots=max_snapshots, cmp=cmp)
         self.query = (query_class or SnapshotQuery)(self.storage.snapshots)
         self.deepcopy_on_save = deepcopy_on_save
         self.deepcopy_on_retrieve = deepcopy_on_retrieve
@@ -191,20 +189,20 @@ class SnapshotManager:
         """
         # Use storage to get the latest snapshot
 
-        if not self.storage.snapshot_order:
+        if not self.storage.insertion_order:
             raise IndexError("No snapshots are available.")
 
         # Use storage to get the latest snapshot ID
-        latest_snapshot_id = self.storage.snapshot_order[0]
+        latest_snapshot_id = self.storage.insertion_order[0]
 
         # Retrieve the snapshot using the get_snapshot method
         return self.get_snapshot(latest_snapshot_id, deepcopy=deepcopy)
 
-    def get_ranked_snapshot_ids(self):
+    def get_ids_by_rank(self):
         """
         Retrieve a list of snapshot IDs ranked according to the comparison function.
 
-        If a custom comparison function (`cmp_function`) was provided during the initialization of
+        If a custom comparison function (`cmp`) was provided during the initialization of
         the manager, the snapshots will be ranked based on that function. If no comparison function
         is defined, the snapshots are ranked by their creation time in insertion order.
 
@@ -213,13 +211,35 @@ class SnapshotManager:
 
         Examples:
             Retrieve snapshot IDs ranked by a custom comparison:
-                ranked_ids = manager.get_ranked_snapshot_ids()
+                ranked_ids = manager.get_ids_by_rank()
 
             If no comparison function is defined:
-                ranked_ids = manager.get_ranked_snapshot_ids()  # Returns IDs in insertion order
+                ranked_ids = manager.get_ids_by_rank()  # Returns IDs in insertion order
         """
 
-        return self.storage.get_ranked_snapshot_ids()
+        return self.storage.get_ids_by_rank()
+
+    def resort(self):
+        """
+        Re-sort the snapshots in storage according to the current comparison function if available.
+
+        Returns:
+            None
+        """
+        self.storage.resort()
+
+    def get_ids_by_insertion_order(self):
+        """
+        Retrieve a list of snapshot IDs in the order they were added.
+
+        This method returns the snapshot IDs in the exact sequence they were created or added
+        to the manager. Unlike ranked snapshots, this order is based purely on the creation
+        or insertion order, unaffected by any cmp or ranking logic.
+
+        Returns:
+            list[str]: A list of snapshot IDs ordered by their insertion sequence.
+        """
+        return self.storage.get_ids_by_insertion_order()
 
     def remove_snapshot(self, snapshot_id):
         """
@@ -413,7 +433,7 @@ class SnapshotManager:
             List all Snapshot IDs:
                 ids = manager.list_snapshots()
         """
-        return self.storage.snapshot_order
+        return self.storage.insertion_order
 
     def get_snapshot_count(self):
         """
@@ -446,11 +466,11 @@ class SnapshotManager:
             Retrieve a Snapshot by index:
                 snapshot = manager.get_snapshot_by_index(0)
         """
-        if index < 0 or index >= len(self.storage.snapshot_order):
+        if index < 0 or index >= len(self.storage.insertion_order):
             raise IndexError(f"Index '{index}' is out of range.")
 
         # Get the snapshot ID by its index
-        snapshot_id = self.storage.snapshot_order[index]
+        snapshot_id = self.storage.insertion_order[index]
 
         # Use the existing get_snapshot method to retrieve the snapshot
         return self.get_snapshot(snapshot_id, deepcopy=deepcopy)
@@ -472,11 +492,11 @@ class SnapshotManager:
             Retrieve the oldest Snapshot:
                 snapshot = manager.get_oldest_snapshot()
         """
-        if not self.storage.snapshot_order:
+        if not self.storage.insertion_order:
             raise IndexError("No Snapshots are available.")
 
         # Get the oldest snapshot ID from the storage
-        oldest_snapshot_id = self.storage.snapshot_order[-1]
+        oldest_snapshot_id = self.storage.insertion_order[-1]
 
         # Use the existing get_snapshot method to retrieve the snapshot
         return self.get_snapshot(oldest_snapshot_id, deepcopy=deepcopy)
@@ -496,9 +516,9 @@ class SnapshotManager:
                 ids = manager.list_snapshots_by_age(ascending=False)
         """
         return (
-            self.storage.snapshot_order
+            self.storage.insertion_order
             if ascending
-            else list(reversed(self.storage.snapshot_order))
+            else list(reversed(self.storage.insertion_order))
         )
 
     def _create_snapshot(self, data, metadata, tags, deepcopy, snapshot_id):
@@ -574,3 +594,39 @@ class SnapshotManager:
                 manager = SnapshotManager.load_from_file("snapshot_manager_state.json")
         """
         return SnapshotPersistence.load_from_file(file_path, SnapshotManager, Snapshot)
+
+    def update_cmp(self, cmp):
+        """
+        Update the cmp function used for ranking snapshots.
+
+        This method updates the comparison function used to determine the ranking of snapshots.
+        The new cmp will be applied to the existing snapshots, and they will be re-ranked accordingly.
+
+        Args:
+            cmp (callable): A new cmp function that takes two snapshots as arguments and
+                returns a negative, zero, or positive number to indicate their relative ranking.
+        """
+        self.storage.update_cmp(cmp)
+
+    def remove_cmp(self):
+        """
+        Remove the cmp function and disable ranked snapshot management.
+
+        This method removes the cmp function from the storage, disabling ranked snapshots.
+        Snapshots will no longer be ranked or sorted based on the cmp, and only their creation
+        order will be maintained.
+        """
+        self.storage.update_cmp(None)
+
+    def update_max_snapshots(self, max_snapshots):
+        """
+        Update the maximum number of snapshots to store.
+
+        This method adjusts the maximum limit for the number of snapshots stored by the manager.
+        If the new limit is smaller than the current number of snapshots, excess snapshots will be removed
+        according to the current ranking or creation order.
+
+        Args:
+            max_snapshots (int): The new maximum number of snapshots to retain. If None, no limit is enforced.
+        """
+        self.storage.update_max_snapshots(max_snapshots)

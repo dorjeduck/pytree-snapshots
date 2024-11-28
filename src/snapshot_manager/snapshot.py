@@ -175,6 +175,32 @@ class Snapshot:
         """
         self.metadata.update(new_metadata)
 
+    def __eq__(self, other):
+        """
+        Compares snapshots for equality based on their IDs.
+
+        Args:
+            other (Snapshot): Another snapshot to compare against.
+
+        Returns:
+            bool: True if the snapshots have the same ID, False otherwise.
+        """
+        if isinstance(other, Snapshot):
+            return self.id == other.id
+        return False
+
+    def __hash__(self):
+        """
+        Returns a hash value based on the snapshot ID.
+
+        This ensures that snapshots can be used as keys in dictionaries or added to sets.
+
+        Returns:
+            int: The hash value of the snapshot ID.
+        """
+        return hash(self.id)
+    
+    
     def __repr__(self):
         """
         Return a string representation of the Snapshot object for debugging and logging.

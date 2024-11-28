@@ -75,12 +75,12 @@ class SnapshotQuery(SnapshotQueryInterface):
         query = ByTimeRangeQuery(start_time, end_time)
         return self.evaluate(query)
 
-    def by_comparator(self, comparator):
+    def by_cmp(self, cmp):
         """
-        Find a snapshot by comparing all snapshots using a custom comparator.
+        Find a snapshot by comparing all snapshots using a custom cmp.
 
         Args:
-            comparator (callable): A function that takes two snapshots and returns
+            cmp (callable): A function that takes two snapshots and returns
                 True if the first snapshot is "better" than the second.
 
         Returns:
@@ -89,7 +89,7 @@ class SnapshotQuery(SnapshotQueryInterface):
         selected_snapshot_id = None
 
         for snapshot_id, snapshot in self.snapshots.items():
-            if selected_snapshot_id is None or comparator(
+            if selected_snapshot_id is None or cmp(
                 snapshot, self.snapshots[selected_snapshot_id]
             ):
                 selected_snapshot_id = snapshot_id

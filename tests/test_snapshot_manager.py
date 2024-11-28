@@ -78,9 +78,11 @@ def test_snapshot_tags():
     assert "experiment" in tags, "Tag 'experiment' should still be present."
 
 
-def test_snapshot_order_limit(setup_manager):
+def test_insertion_order_limit(setup_manager):
     """Test enforcing the max_snapshots limit."""
-    manager = setup_manager  # Fixture provides a SnapshotManager instance
+    manager = SnapshotManager(
+        max_snapshots=4
+    )  # Fixture provides a SnapshotManager instance
 
     # Save more snapshots than the max_snapshots limit
     for i in range(6):
@@ -92,16 +94,16 @@ def test_snapshot_order_limit(setup_manager):
     ), "The number of snapshots exceeds the max_snapshots limit."
 
     # Verify the order of snapshots
-    snapshot_order = manager.storage.snapshot_order
+    insertion_order = manager.storage.insertion_order
     assert (
-        len(snapshot_order) == manager.storage.max_snapshots
+        len(insertion_order) == manager.storage.max_snapshots
     ), "The snapshot order does not match the max_snapshots limit."
 
     # The oldest snapshot (first inserted) should have been removed
-    oldest_remaining_snapshot = snapshot_order[0]
+    oldest_remaining_snapshot = insertion_order[0]
     oldest_remaining_pytree = manager.get_snapshot(oldest_remaining_snapshot)
     assert (
-        oldest_remaining_pytree.data["val"] == 1
+        oldest_remaining_pytree.data["val"] == 2
     ), "The oldest snapshot was not removed correctly."
 
 
@@ -256,7 +258,7 @@ def test_duplicate_snapshots(setup_manager):
     ), "Duplicate snapshots should have identical content."
 
 
-def test_snapshot_order_after_state_restore(tmp_path, setup_manager):
+def test_insertion_order_after_state_restore(tmp_path, setup_manager):
     """Test that snapshot order is preserved after restoring state."""
     manager = setup_manager
 
@@ -273,7 +275,7 @@ def test_snapshot_order_after_state_restore(tmp_path, setup_manager):
 
     # Verify that the snapshot order is preserved
     assert (
-        restored_manager.storage.snapshot_order == manager.storage.snapshot_order
+        restored_manager.storage.insertion_order == manager.storage.insertion_order
     ), "Snapshot order was not preserved after restoring state."
 
 
@@ -342,7 +344,7 @@ def test_prune_snapshots_by_accuracy():
         )
 
     # Initialize manager with a maximum of 3 snapshots
-    manager = SnapshotManager(max_snapshots=3, cmp_function=cmp_by_accuracy)
+    manager = SnapshotManager(max_snapshots=3, cmp=cmp_by_accuracy)
 
     # Save snapshots with varying accuracy
     manager.save_snapshot({"a": 1}, snapshot_id="snap1", metadata={"accuracy": 0.5})
@@ -353,7 +355,7 @@ def test_prune_snapshots_by_accuracy():
     manager.save_snapshot({"d": 4}, snapshot_id="snap4", metadata={"accuracy": 0.8})
 
     # Verify that only the top 3 snapshots are retained
-    snapshots = manager.get_ranked_snapshot_ids()
+    snapshots = manager.get_ids_by_rank()
     assert (
         len(snapshots) == 3
     ), "Number of retained snapshots does not match max_snapshots."
@@ -374,7 +376,7 @@ def test_reject_low_ranked_snapshot():
         )
 
     # Initialize manager with a maximum of 3 snapshots
-    manager = SnapshotManager(max_snapshots=3, cmp_function=cmp_by_accuracy)
+    manager = SnapshotManager(max_snapshots=3, cmp=cmp_by_accuracy)
 
     # Save snapshots with varying accuracy
     manager.save_snapshot({"a": 1}, snapshot_id="snap1", metadata={"accuracy": 0.5})
@@ -385,7 +387,7 @@ def test_reject_low_ranked_snapshot():
     manager.save_snapshot({"e": 5}, snapshot_id="snap5", metadata={"accuracy": 0.4})
 
     # Verify that the low-ranked snapshot was not added
-    snapshots = manager.get_ranked_snapshot_ids()
+    snapshots = manager.get_ids_by_rank()
     assert len(snapshots) == 3, "Number of snapshots exceeds max_snapshots."
     assert "snap5" not in snapshots, "Low-ranked snapshot was incorrectly added."
     assert snapshots == [
@@ -572,9 +574,7 @@ def test_by_tags_and_logic():
 
 
 def test_tree_replace(setup_manager):
-    """
-    Test the tree_replace method to ensure it correctly updates snapshot PyTrees.
-    """
+   
     manager = PyTreeSnapshotManager()
 
     # Save snapshots with PyTree structures
@@ -631,3 +631,88 @@ def test_tree_replace(setup_manager):
     assert jnp.array_equal(
         transformed_snapshot2.data["d"], jnp.array([11, 12, 13])
     ), "Snapshot2 'd' was incorrectly transformed."
+
+
+def test_cmp_edge_cases():
+    """Test edge cases for custom cmp function."""
+
+    def cmp(snap1, snap2):
+        # Prioritize snapshots with lower metadata values
+        return snap1.metadata.get("priority", 0) - snap2.metadata.get("priority", 0)
+
+    manager = SnapshotManager(max_snapshots=3, cmp=cmp)
+
+    # Save snapshots with varying priority
+    manager.save_snapshot({"a": 1}, snapshot_id="snap1", metadata={"priority": 2})
+    manager.save_snapshot({"b": 2}, snapshot_id="snap2", metadata={"priority": 3})
+    manager.save_snapshot({"c": 3}, snapshot_id="snap3", metadata={"priority": 1})
+
+    # Save a snapshot with higher priority
+    manager.save_snapshot({"d": 4}, snapshot_id="snap4", metadata={"priority": 4})
+
+    # Validate that the snapshots are ordered by priority
+    snapshot_ids = manager.get_ids_by_rank()
+    assert snapshot_ids == [
+        "snap4",
+        "snap2",
+        "snap1",
+    ], "Snapshots not ranked correctly."
+
+    # Save a snapshot with lower priority than the lowest in the list
+    manager.save_snapshot({"e": 5}, snapshot_id="snap5", metadata={"priority": 0})
+
+    # Ensure that the low-priority snapshot was not added
+    snapshot_ids = manager.get_ids_by_rank()
+    assert len(snapshot_ids) == 3, "Snapshot limit exceeded."
+    assert "snap5" not in snapshot_ids, "Low-priority snapshot was incorrectly added."
+
+
+def test_update_max_limit():
+    """Test dynamically updating max_snapshots."""
+    manager = SnapshotManager(max_snapshots=2)
+
+    # Save snapshots to reach the limit
+    manager.save_snapshot({"a": 1}, snapshot_id="snap1")
+    manager.save_snapshot({"b": 2}, snapshot_id="snap2")
+
+    # Increase the limit
+    manager.update_max_snapshots(3)
+    manager.save_snapshot({"c": 3}, snapshot_id="snap3")
+    assert len(manager.storage.snapshots) == 3, "Failed to handle increased limit."
+
+    # Decrease the limit
+    manager.update_max_snapshots(2)
+    snapshot_ids = manager.storage.insertion_order
+    assert len(snapshot_ids) == 2, "Failed to handle decreased limit."
+    assert "snap1" not in snapshot_ids, "Oldest snapshot not removed on limit decrease."
+
+
+def test_switch_cmp():
+    """Test switching between cmp functions."""
+
+    def priority_cmp(snap1, snap2):
+        return snap1.metadata.get("priority", 0) - snap2.metadata.get("priority", 0)
+
+    def reverse_priority_cmp(snap1, snap2):
+        return snap2.metadata.get("priority", 0) - snap1.metadata.get("priority", 0)
+
+    manager = SnapshotManager(max_snapshots=3, cmp=priority_cmp)
+
+    # Save snapshots with varying priority
+    manager.save_snapshot({"a": 1}, snapshot_id="snap1", metadata={"priority": 2})
+    manager.save_snapshot({"b": 2}, snapshot_id="snap2", metadata={"priority": 3})
+    manager.save_snapshot({"c": 3}, snapshot_id="snap3", metadata={"priority": 1})
+
+    # Switch to reverse priority cmp
+    manager.update_cmp(reverse_priority_cmp)
+
+    # Save a snapshot with medium priority
+    manager.save_snapshot({"d": 4}, snapshot_id="snap4", metadata={"priority": 2.4})
+
+    # Validate that snapshots are now ordered by reverse priority
+    snapshot_ids = manager.get_ids_by_rank()
+    assert snapshot_ids == [
+        "snap3",
+        "snap1",
+        "snap4",
+    ], "Snapshots not ranked correctly after cmp change."

@@ -36,7 +36,7 @@ print("Snapshots saved in the last 2 seconds:", results)
 
 ## Custom Criteria for Selecting Snapshots
 
-This example shows how to identify a single snapshot that meets specific user-defined criteria using the `get_snapshot_by_comparator` method. You can use this feature to search for snapshots based on metadata, tags, or other properties, such as finding the snapshot with the highest accuracy, the most associated tags, or the earliest creation time.
+This example shows how to identify a single snapshot that meets specific user-defined criteria using the `get_snapshot_by_cmp` method. You can use this feature to search for snapshots based on metadata, tags, or other properties, such as finding the snapshot with the highest accuracy, the most associated tags, or the earliest creation time.
 
 ```python
 from snapshot_manager import SnapshotManager
@@ -50,21 +50,21 @@ manager.save_snapshot({}, snapshot_id="snap2", metadata={"accuracy": 0.90, "crea
 manager.save_snapshot({}, snapshot_id="snap3", metadata={"accuracy": 0.88, "created_at": 1790000000.0}, tags=["final", "experiment", "published"])
 
 # Find snapshot with the highest accuracy
-snapshot_with_highest_accuracy = manager.query.by_comparator(
+snapshot_with_highest_accuracy = manager.query.by_cmp(
     lambda s1, s2: s1.metadata["accuracy"] >= s2.metadata["accuracy"]
 )
 print(f"Snapshot with highest accuracy: {snapshot_with_highest_accuracy}")
 # Output: Snapshot with highest accuracy: snap2
 
 # Find snapshot with the most tags
-snapshot_with_most_tags = manager.query.by_comparator(
+snapshot_with_most_tags = manager.query.by_cmp(
     lambda s1, s2: len(s1.tags) >= len(s2.tags)
 )
 print(f"Snapshot with most tags: {snapshot_with_most_tags}")
 # Output: Snapshot with most tags: snap3
 
 # Find the oldest snapshot
-oldest_snapshot_id = manager.query.by_comparator(
+oldest_snapshot_id = manager.query.by_cmp(
     lambda s1, s2: s1.metadata["created_at"] <= s2.metadata["created_at"]
 )
 print(f"Oldest snapshot: {oldest_snapshot_id}")

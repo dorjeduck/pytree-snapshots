@@ -22,21 +22,21 @@ manager.save_snapshot(
     tags=["final", "experiment", "published"],
 )
 
-snapshot_with_highest_accuracy = manager.query.by_comparator(
+snapshot_with_highest_accuracy = manager.query.by_cmp(
     lambda s1, s2: s1.metadata["accuracy"] >= s2.metadata["accuracy"]
 )
 
 print(f"Snapshot with highest accuracy: {snapshot_with_highest_accuracy}")
 
-# Use a comparator to find the snapshot with the most tags
-snapshot_with_most_tags = manager.query.by_comparator(
+# Use a cmp to find the snapshot with the most tags
+snapshot_with_most_tags = manager.query.by_cmp(
     lambda s1, s2: len(s1.tags) >= len(s2.tags)
 )
 
 print(f"Snapshot with most tags: {snapshot_with_most_tags}")
 
-# Use a comparator to find the oldest snapshot
-oldest_snapshot_id = manager.query.by_comparator(
+# Use a cmp to find the oldest snapshot
+oldest_snapshot_id = manager.query.by_cmp(
     lambda s1, s2: s1.metadata["created_at"] <= s2.metadata["created_at"]
 )
 

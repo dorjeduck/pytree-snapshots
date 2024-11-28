@@ -4,26 +4,41 @@ from snapshot_manager import SnapshotManager
 manager = SnapshotManager()
 
 # Save snapshots with metadata and tags
-manager.save_snapshot({}, snapshot_id="snap1", metadata={"accuracy": 0.85, "created_at": 1690000000.0}, tags=["experiment", "draft"])
-manager.save_snapshot({}, snapshot_id="snap2", metadata={"accuracy": 0.90, "created_at": 1695000000.0}, tags=["draft"])
-manager.save_snapshot({}, snapshot_id="snap3", metadata={"accuracy": 0.88, "created_at": 1790000000.0}, tags=["final", "experiment", "published"])
+manager.save_snapshot(
+    {},
+    snapshot_id="snap1",
+    metadata={"accuracy": 0.85, "created_at": 1690000000.0},
+    tags=["experiment", "draft"],
+)
+manager.save_snapshot(
+    {},
+    snapshot_id="snap2",
+    metadata={"accuracy": 0.90, "created_at": 1695000000.0},
+    tags=["draft"],
+)
+manager.save_snapshot(
+    {},
+    snapshot_id="snap3",
+    metadata={"accuracy": 0.88, "created_at": 1790000000.0},
+    tags=["final", "experiment", "published"],
+)
 
 # Find snapshot with the highest accuracy
-snapshot_with_highest_accuracy = manager.query.by_comparator(
+snapshot_with_highest_accuracy = manager.query.by_cmp(
     lambda s1, s2: s1.metadata["accuracy"] >= s2.metadata["accuracy"]
 )
 print(f"Snapshot with highest accuracy: {snapshot_with_highest_accuracy}")
 # Output: Snapshot with highest accuracy: snap2
 
 # Find snapshot with the most tags
-snapshot_with_most_tags = manager.query.by_comparator(
+snapshot_with_most_tags = manager.query.by_cmp(
     lambda s1, s2: len(s1.tags) >= len(s2.tags)
 )
 print(f"Snapshot with most tags: {snapshot_with_most_tags}")
 # Output: Snapshot with most tags: snap3
 
 # Find the oldest snapshot
-oldest_snapshot_id = manager.query.by_comparator(
+oldest_snapshot_id = manager.query.by_cmp(
     lambda s1, s2: s1.metadata["created_at"] <= s2.metadata["created_at"]
 )
 print(f"Oldest snapshot: {oldest_snapshot_id}")
