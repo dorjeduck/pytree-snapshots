@@ -142,7 +142,7 @@ This example demonstrates how to combine logical operations (AND, OR, NOT) to cr
 
 ```python
 from snapshot_manager import SnapshotManager
-from snapshot_manager.query import AndQuery, OrQuery, NotQuery ByMetadataQuery, ByTagQuery
+from snapshot_manager.query import AndQuery, OrQuery, NotQuery, ByMetadataQuery, ByTagQuery
 
 # Initialize the manager
 manager = SnapshotManager()

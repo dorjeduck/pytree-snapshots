@@ -96,7 +96,7 @@ pytrees = manager.tree_map(
 
 # Output the results
 for i, pytree in enumerate(pytrees, start=1):
-    print(f"Modified PyTree for snap{i}: {pytree}")
+    print(f"Modified PyTree retrieved from snap{i}: {pytree}")
 
 # Outputs:
 # Modified PyTree for snap1: {'txt': 'hello jax', 'x': 42}
