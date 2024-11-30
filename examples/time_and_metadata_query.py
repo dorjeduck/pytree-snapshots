@@ -1,3 +1,11 @@
+"""Example demonstrating time and metadata queries in SnapshotManager.
+
+This example shows:
+1. Saving snapshots with timestamps and metadata
+2. Querying snapshots by time range
+3. Combining time and metadata queries for specific results
+"""
+
 import time
 from snapshot_manager import SnapshotManager
 from snapshot_manager.query.logical_queries import AndQuery

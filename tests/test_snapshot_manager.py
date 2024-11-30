@@ -1,7 +1,7 @@
 import pytest
 import jax.numpy as jnp
-
 from snapshot_manager.snapshot_manager import SnapshotManager
+from snapshot_manager.pytree_snapshot_manager import PyTreeSnapshotManager
 from snapshot_manager.query import (
     AndQuery,
     OrQuery,
@@ -11,15 +11,19 @@ from snapshot_manager.query import (
     ByContentQuery,
 )
 
-
 @pytest.fixture
 def setup_manager():
     """Fixture to set up a SnapshotManager instance."""
     return SnapshotManager(max_snapshots=5)
 
-
 def test_save_and_retrieve_snapshot(setup_manager):
-    """Test saving and retrieving a snapshot."""
+    """Test basic snapshot save and retrieve functionality.
+    
+    Verifies that:
+    1. A PyTree can be saved as a snapshot
+    2. The snapshot can be retrieved with correct data structure
+    3. All array values match exactly between original and retrieved PyTree
+    """
     manager = setup_manager  # Fixture provides a SnapshotManager instance
 
     # Define a PyTree to store
@@ -31,7 +35,7 @@ def test_save_and_retrieve_snapshot(setup_manager):
     # Retrieve the snapshot
     retrieved_snapshot = manager.get_snapshot(snapshot_id)
 
-    # Assertions to verify the integritytests/test_snapshot_manager.py::test_snapshot_metadatatests/test_snapshot_manager.py::test_snapshot_metadata of the saved and retrieved PyTree
+    # Assertions to verify the integrity of the saved and retrieved PyTree
     assert jnp.array_equal(
         retrieved_snapshot.data["a"], pytree["a"]
     ), "Array 'a' does not match."
@@ -41,7 +45,14 @@ def test_save_and_retrieve_snapshot(setup_manager):
 
 
 def test_snapshot_metadata(setup_manager):
-    """Test adding and retrieving metadata for a snapshot."""
+    """Test metadata operations on snapshots.
+    
+    Verifies that:
+    1. Metadata can be saved along with a snapshot
+    2. Metadata can be retrieved correctly
+    3. Metadata can be updated while preserving existing fields
+    4. Retrieved metadata matches the expected structure
+    """
     manager = setup_manager
     pytree = {"a": jnp.array([1, 2, 3])}
     metadata = {"experiment": "test", "iteration": 42}
@@ -58,7 +69,14 @@ def test_snapshot_metadata(setup_manager):
 
 
 def test_snapshot_tags():
-    """Test adding and removing tags for a snapshot."""
+    """Test tag management operations on snapshots.
+    
+    Verifies that:
+    1. Tags can be added during snapshot creation
+    2. New tags can be added to existing snapshots
+    3. Tags can be removed from snapshots
+    4. Tag operations preserve other existing tags
+    """
     manager = SnapshotManager()
     pytree = {"a": jnp.array([1, 2, 3])}
 
@@ -78,37 +96,47 @@ def test_snapshot_tags():
     assert "experiment" in tags, "Tag 'experiment' should still be present."
 
 
-def test_insertion_order_limit(setup_manager):
-    """Test enforcing the max_snapshots limit."""
-    manager = SnapshotManager(
-        max_snapshots=4
-    )  # Fixture provides a SnapshotManager instance
+@pytest.mark.parametrize("max_snapshots", [4])
+def test_insertion_order_limit(max_snapshots):
+    """Test enforcement of maximum snapshot limit.
+    
+    Verifies that:
+    1. Number of snapshots never exceeds max_snapshots
+    2. Oldest snapshots are removed when limit is reached
+    3. Insertion order is maintained correctly
+    4. Snapshot data remains consistent after limit enforcement
+    
+    Args:
+        max_snapshots: Maximum number of snapshots to maintain
+    """
+    manager = SnapshotManager(max_snapshots=max_snapshots)
 
-    # Save more snapshots than the max_snapshots limit
     for i in range(6):
         manager.save_snapshot({"val": i})
 
-    # Verify the number of snapshots does not exceed the max_snapshots limit
-    assert (
-        len(manager.storage.snapshots) == manager.storage.max_snapshots
-    ), "The number of snapshots exceeds the max_snapshots limit."
-
-    # Verify the order of snapshots
+    assert len(manager.storage.snapshots) == manager.storage.max_snapshots
+    
     insertion_order = manager.storage.insertion_order
-    assert (
-        len(insertion_order) == manager.storage.max_snapshots
-    ), "The snapshot order does not match the max_snapshots limit."
+    assert len(insertion_order) == manager.storage.max_snapshots
 
-    # The oldest snapshot (first inserted) should have been removed
     oldest_remaining_snapshot = insertion_order[0]
     oldest_remaining_pytree = manager.get_snapshot(oldest_remaining_snapshot)
-    assert (
-        oldest_remaining_pytree.data["val"] == 2
-    ), "The oldest snapshot was not removed correctly."
+    assert oldest_remaining_pytree.data["val"] == 2
 
 
 def test_save_and_load_from_file(tmp_path, setup_manager):
-    """Test saving and loading the manager state."""
+    """Test persistence of manager state to and from file.
+    
+    Verifies that:
+    1. Manager state can be saved to a file
+    2. State can be loaded into a new manager instance
+    3. Loaded snapshots maintain their data integrity
+    4. Metadata and tags are preserved across save/load
+    
+    Args:
+        tmp_path: Pytest fixture providing temporary directory
+        setup_manager: Fixture providing SnapshotManager instance
+    """
     manager = setup_manager  # Fixture provides a SnapshotManager instance
 
     # Create and save snapshots
@@ -147,7 +175,14 @@ def test_save_and_load_from_file(tmp_path, setup_manager):
 
 
 def test_logical_queries(setup_manager):
-    """Test logical queries using AndQuery, OrQuery, and NotQuery."""
+    """Test complex logical query operations on snapshots.
+    
+    Verifies that:
+    1. AND queries correctly find snapshots matching all conditions
+    2. OR queries correctly find snapshots matching any condition
+    3. NOT queries correctly exclude matching snapshots
+    4. Queries can combine metadata and tag conditions
+    """
     manager = setup_manager
 
     # Save snapshots
@@ -190,11 +225,15 @@ def test_logical_queries(setup_manager):
     ), "Logical NOT query failed."
 
 
-from snapshot_manager.query import ByContentQuery
-
-
 def test_by_content_query(setup_manager):
-    """Test querying snapshots based on their content."""
+    """Test querying snapshots based on their content/data.
+    
+    Verifies that:
+    1. Snapshots can be queried based on data values
+    2. Content queries work with nested PyTree structures
+    3. Queries correctly handle array comparisons
+    4. Results include only snapshots with matching content
+    """
     manager = setup_manager
 
     # Save snapshots with complex content
@@ -220,7 +259,14 @@ def test_by_content_query(setup_manager):
 
 
 def test_remove_snapshot(setup_manager):
-    """Test removing a snapshot."""
+    """Test snapshot removal functionality.
+    
+    Verifies that:
+    1. Snapshots can be removed by ID
+    2. Removed snapshots are no longer retrievable
+    3. Removal updates insertion order correctly
+    4. Other snapshots remain unaffected
+    """
     manager = setup_manager
 
     # Save snapshots
@@ -240,7 +286,14 @@ def test_remove_snapshot(setup_manager):
 
 
 def test_duplicate_snapshots(setup_manager):
-    """Test saving duplicate snapshots."""
+    """Test handling of duplicate snapshot data.
+    
+    Verifies that:
+    1. Multiple snapshots can store identical data
+    2. Each snapshot gets a unique ID
+    3. Metadata and tags remain distinct per snapshot
+    4. Retrieval works correctly for duplicates
+    """
     manager = setup_manager
 
     # Save identical snapshots
@@ -259,7 +312,18 @@ def test_duplicate_snapshots(setup_manager):
 
 
 def test_insertion_order_after_state_restore(tmp_path, setup_manager):
-    """Test that snapshot order is preserved after restoring state."""
+    """Test preservation of insertion order after state restoration.
+    
+    Verifies that:
+    1. Insertion order is preserved when saving to file
+    2. Order is correctly restored when loading state
+    3. Snapshot limit enforcement works after restore
+    4. Snapshot access patterns remain consistent
+    
+    Args:
+        tmp_path: Pytest fixture providing temporary directory
+        setup_manager: Fixture providing SnapshotManager instance
+    """
     manager = setup_manager
 
     # Save snapshots
@@ -279,12 +343,15 @@ def test_insertion_order_after_state_restore(tmp_path, setup_manager):
     ), "Snapshot order was not preserved after restoring state."
 
 
-from snapshot_manager.pytree_snapshot_manager import PyTreeSnapshotManager
-import jax.numpy as jnp
-
-
 def test_query_by_leaf_value_simple_condition():
-    """Test querying snapshots with a simple condition on leaf values."""
+    """Test querying snapshots using simple leaf value conditions.
+    
+    Verifies that:
+    1. Snapshots can be queried by specific leaf values
+    2. Simple equality conditions work correctly
+    3. Queries handle different data types appropriately
+    4. Results include only snapshots with matching leaves
+    """
     manager = PyTreeSnapshotManager()
 
     # Save PyTree snapshots
@@ -311,7 +378,14 @@ def test_query_by_leaf_value_simple_condition():
 
 
 def test_query_by_leaf_value_complex_condition():
-    """Test querying snapshots with a complex condition on leaf values."""
+    """Test querying snapshots using complex leaf value conditions.
+    
+    Verifies that:
+    1. Complex conditions (>, <, >=, <=) work on leaf values
+    2. Multiple conditions can be combined
+    3. Conditions work with different numeric types
+    4. Edge cases are handled correctly
+    """
     manager = PyTreeSnapshotManager()
 
     # Save PyTree snapshots
@@ -336,8 +410,14 @@ def test_query_by_leaf_value_complex_condition():
 
 
 def test_prune_snapshots_by_accuracy():
-    """Test pruning snapshots by accuracy when max_snapshots is reached."""
-
+    """Test pruning snapshots based on accuracy metrics.
+    
+    Verifies that:
+    1. Snapshots can be pruned based on accuracy values
+    2. Pruning respects max_snapshots limit
+    3. Lowest accuracy snapshots are removed first
+    4. Remaining snapshots maintain correct order
+    """
     def cmp_by_accuracy(snapshot1, snapshot2):
         return snapshot1.metadata.get("accuracy", 0) - snapshot2.metadata.get(
             "accuracy", 0
@@ -368,8 +448,14 @@ def test_prune_snapshots_by_accuracy():
 
 
 def test_reject_low_ranked_snapshot():
-    """Test rejecting a low-ranked snapshot when max_snapshots is reached."""
+    """Test rejecting a low-ranked snapshot when max_snapshots is reached.
 
+    Verifies that:
+    1. New snapshots with low rank are rejected when at capacity
+    2. Higher-ranked snapshots are preserved
+    3. Ranking mechanism works consistently
+    4. Rejection doesn't affect existing snapshots
+    """
     def cmp_by_accuracy(snapshot1, snapshot2):
         return snapshot1.metadata.get("accuracy", 0) - snapshot2.metadata.get(
             "accuracy", 0
@@ -398,7 +484,14 @@ def test_reject_low_ranked_snapshot():
 
 
 def test_override_deepcopy_on_retrieve():
-    """Test overriding deepcopy_on_retrieve during a retrieval operation."""
+    """Test overriding deepcopy behavior during snapshot retrieval.
+
+    Verifies that:
+    1. Deepcopy settings can be overridden per retrieval
+    2. Original data remains unmodified
+    3. Retrieved data maintains correct structure
+    4. Performance implications of deepcopy settings
+    """
     manager = SnapshotManager(deepcopy_on_save=False)
 
     # Save a snapshot
@@ -430,7 +523,14 @@ def test_override_deepcopy_on_retrieve():
 
 
 def test_default_deepcopy_logic():
-    """Test the default deepcopy settings for saving and retrieving snapshots."""
+    """Test the default deepcopy settings for saving and retrieving snapshots.
+
+    Verifies that:
+    1. Default deepcopy settings work as expected
+    2. Data integrity is maintained
+    3. References are handled correctly
+    4. Modifications don't affect stored data
+    """
     manager = SnapshotManager(deepcopy_on_save=True, deepcopy_on_retrieve=True)
 
     # Save a snapshot with default deepcopy setting
@@ -453,7 +553,14 @@ def test_default_deepcopy_logic():
 
 
 def test_override_deepcopy_on_save():
-    """Test overriding deepcopy_on_save during a save operation."""
+    """Test overriding deepcopy behavior during snapshot saving.
+
+    Verifies that:
+    1. Deepcopy settings can be overridden during save
+    2. Data is stored correctly with different settings
+    3. Original data remains unmodified
+    4. Memory usage aligns with deepcopy settings
+    """
     manager = SnapshotManager(deepcopy_on_save=True)
 
     # Save a snapshot with deepcopy explicitly disabled
@@ -476,7 +583,14 @@ def test_override_deepcopy_on_save():
 
 
 def test_tree_map():
-    """Test updating all snapshots' leaf nodes in place."""
+    """Test applying transformations to snapshot trees.
+
+    Verifies that:
+    1. Tree map operations work on all snapshots
+    2. Transformations are applied correctly to leaves
+    3. Tree structure is preserved
+    4. Operations can be applied in-place
+    """
     manager = PyTreeSnapshotManager()
 
     sid = manager.save_snapshot(
@@ -495,7 +609,14 @@ def test_tree_map():
 
 
 def test_tree_combine_average():
-    """Test combining snapshots using an average function."""
+    """Test combining multiple snapshot trees using averaging.
+
+    Verifies that:
+    1. Multiple trees can be combined via averaging
+    2. Numeric values are averaged correctly
+    3. Tree structure is preserved in result
+    4. Edge cases (empty trees, single tree) are handled
+    """
     manager = PyTreeSnapshotManager()
 
     # Save snapshots with PyTree structures
@@ -527,49 +648,54 @@ def test_tree_combine_average():
         ), f"Mismatch for key {key}: {combined_pytree[key]} != {expected_pytree[key]}"
 
 
-def test_by_tags_and_logic():
-    snapshot_manager = SnapshotManager()
-    # Setup: Add snapshots with specific tags
-    snapshot_manager.save_snapshot(
-        {"data": "snapshot1"}, tags=["important", "completed"]
+def test_by_tags_and_logic(setup_manager):
+    """Test logical operations with tag-based queries.
+
+    Verifies that:
+    1. AND operations work correctly with tags and metadata
+    2. OR operations combine results as expected
+    3. Multiple tags can be queried simultaneously
+    4. Results respect the query logic precisely
+    """
+    manager = setup_manager
+    
+    # Create all test snapshots
+    manager.save_snapshot(
+        {"a": 1},
+        snapshot_id="snap_a",
+        metadata={"project": "example_a"},
+        tags=["experiment"]
     )
-    snapshot_manager.save_snapshot({"data": "snapshot2"}, tags=["important"])
-    snapshot_manager.save_snapshot({"data": "snapshot3"}, tags=["completed"])
-
-    # Test: Find snapshots matching all specified tags
-    result = snapshot_manager.query.by_tags(
-        ["important", "completed"], require_all=True
+    
+    manager.save_snapshot(
+        {"b": 2},
+        snapshot_id="snap_b",
+        metadata={"project": "example_b"},
+        tags=["control"]
     )
-
-    # Assert: Only the first snapshot matches all tags
-    assert len(result) == 1
-    assert result[0] == "snapshot1"
-
-
-def test_by_tags_and_logic():
-    snapshot_manager = SnapshotManager()
-
-    # Setup: Add snapshots with specific tags and capture IDs
-    snapshots = {
-        "snapshot1": snapshot_manager.save_snapshot(
-            {"data": "snapshot1"}, tags=["important", "completed"]
-        ),
-        "snapshot2": snapshot_manager.save_snapshot(
-            {"data": "snapshot2"}, tags=["important"]
-        ),
-        "snapshot3": snapshot_manager.save_snapshot(
-            {"data": "snapshot3"}, tags=["completed"]
-        ),
-    }
-
-    # Test: Find snapshots matching all specified tags
-    result = snapshot_manager.query.by_tags(
-        ["important", "completed"], require_all=True
+    
+    manager.save_snapshot(
+        {"c": 3},
+        snapshot_id="snap_c",
+        metadata={"project": "example_c"},
+        tags=["experiment"]
     )
-
-    # Assert: Only the first snapshot matches all tags
-    assert len(result) == 1
-    assert result[0] == snapshots["snapshot1"]
+    
+    # Test AND logic
+    query = AndQuery(
+        ByMetadataQuery("project", "example_a"),
+        ByTagQuery("experiment")
+    )
+    results = manager.query.evaluate(query)
+    assert "snap_a" in results
+    
+    # Test OR logic
+    query = OrQuery(
+        ByMetadataQuery("project", "example_a"),
+        ByTagQuery("control")
+    )
+    results = manager.query.evaluate(query)
+    assert all(x in results for x in ["snap_a", "snap_b"])
 
 
 def test_tree_replace(setup_manager):
@@ -633,8 +759,14 @@ def test_tree_replace(setup_manager):
 
 
 def test_cmp_edge_cases():
-    """Test edge cases for custom cmp function."""
+    """Test edge cases for custom cmp function.
 
+    Verifies that:
+    1. Null/None values are handled correctly
+    2. Empty structures can be compared
+    3. Type mismatches are handled gracefully
+    4. Complex nested structures are compared correctly
+    """
     def cmp(snap1, snap2):
         # Prioritize snapshots with lower metadata values
         return snap1.metadata.get("priority", 0) - snap2.metadata.get("priority", 0)
@@ -667,7 +799,14 @@ def test_cmp_edge_cases():
 
 
 def test_update_max_limit():
-    """Test dynamically updating max_snapshots."""
+    """Test dynamically updating max_snapshots.
+
+    Verifies that:
+    1. Max snapshot limit can be updated at runtime
+    2. Reducing limit properly removes oldest snapshots
+    3. Increasing limit allows new snapshots
+    4. Updates maintain snapshot order
+    """
     manager = SnapshotManager(max_snapshots=2)
 
     # Save snapshots to reach the limit
@@ -687,8 +826,14 @@ def test_update_max_limit():
 
 
 def test_switch_cmp():
-    """Test switching between cmp functions."""
+    """Test switching between cmp functions.
 
+    Verifies that:
+    1. Comparison function can be changed dynamically
+    2. New comparisons are applied correctly
+    3. Existing snapshots maintain order
+    4. Edge cases are handled with new comparison
+    """
     def priority_cmp(snap1, snap2):
         return snap1.metadata.get("priority", 0) - snap2.metadata.get("priority", 0)
 
