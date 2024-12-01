@@ -143,6 +143,8 @@ ptsm = PyTreeSnapshotManager(
 )
 
 
+
+
 def train(
     model: CNN,
     trainloader: torch.utils.data.DataLoader,
@@ -204,6 +206,8 @@ def train(
                 "accuracy": float(test_accuracy.item()),
             },
         )
+        
+        
 
     return model
 
