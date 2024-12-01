@@ -436,6 +436,7 @@ def test_prune_snapshots_by_accuracy():
 
     # Verify that only the top 3 snapshots are retained
     snapshots = manager.get_ids_by_rank()
+    
     assert (
         len(snapshots) == 3
     ), "Number of retained snapshots does not match max_snapshots."
