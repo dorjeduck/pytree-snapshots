@@ -2,13 +2,10 @@
 
 <p align="left">
   <img src="imgs/logo.svg" alt="yeah" width="200" style="float: right; margin: 0 10px 10px 0;">
-
-
-A lightweight and versatile tool for managing Python objects, allowing users to create isolated snapshots or manage live references, both enriched with metadata and tags.
-
+  A lightweight and versatile tool for managing Python objects, allowing users to create isolated snapshots or manage live references, both enriched with metadata and tags.
+</p>
 Initially created with `JAX PyTrees` in mind, it works seamlessly with a wide range of Python object. A specialized `PyTreeSnapshotManager` is included for PyTree-specific operations, but its features are still limited and evolving.
 
-</p>
 **Note**: This project began as a personal experiment to explore snapshot management. As it grew into a potentially useful tool, I decided to share it on GitHub to gather feedback and suggestions. Currently, it’s in beta and may undergo significant changes as it matures.
 
 ## Features
